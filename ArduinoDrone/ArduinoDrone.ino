@@ -1,9 +1,9 @@
 #define SOP 255
-#define Ts 10000
-#define Ts_sec 0.01
-
+#define Ts 20000
+#define Ts_sec 0.02
+#define python 1
 #define algoritmoVelocidade 0
-
+int contador = 0;
 //float Ts_sec;
 uint32_t Tant;
 int acaoA = 0;
@@ -56,9 +56,9 @@ double gyroX, gyroY, gyroZ;
 int16_t tempRaw;
 
 double gyroXangle, gyroYangle; // Angle calculate using the gyro only
-double compAngleX, compAngleY; // Calculated angle using a complementary filter
+//double compAngleX, compAngleY; // Calculated angle using a complementary filter
 double kalAngleX, kalAngleY; // Calculated angle using a Kalman filter
-//double anguloTeste = 10.5;
+
 uint32_t timer;
 uint8_t i2cData[14]; // Buffer for I2C data
 
@@ -73,13 +73,11 @@ void setup() {
   myservoA.write(17);
   myservoB.write(17); 
   initializingPID();
-  Serial.println(q0);
-  Serial.println(q1);
-  Serial.println(q2);
-  Serial.println(Ti);
-  Serial.println(Td);
-  Serial.println(Ts_sec);
+  #if python
+  while(!RX()); //Travando o script para rodar o loop apenas quando o primeiro bit for recebido
+  #else
   while(millis()<5000);
+  #endif
   digitalWrite(13,HIGH);
   
   Wire.begin();
@@ -125,8 +123,8 @@ void setup() {
   kalmanY.setAngle(pitch);
   gyroXangle = roll;
   gyroYangle = pitch;
-  compAngleX = roll;
-  compAngleY = pitch;
+  //compAngleX = roll;
+  //compAngleY = pitch;
 
   timer = micros();
   Tant = micros();
@@ -145,7 +143,6 @@ void loop() {
 
   double dt = (double)(micros() - timer) / 1000000; // Calculate delta time
   timer = micros();
-
   // Source: http://www.freescale.com/files/sensors/doc/app_note/AN3461.pdf eq. 25 and eq. 26
   // atan2 outputs the value of -π to π (radians) - see http://en.wikipedia.org/wiki/Atan2
   // It is then converted from radians to degrees
@@ -164,7 +161,7 @@ void loop() {
   // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
   if ((roll < -90 && kalAngleX > 90) || (roll > 90 && kalAngleX < -90)) {
     kalmanX.setAngle(roll);
-    compAngleX = roll;
+    //compAngleX = roll;
     kalAngleX = roll;
     gyroXangle = roll;
   } else
@@ -177,7 +174,7 @@ void loop() {
   // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
   if ((pitch < -90 && kalAngleY > 90) || (pitch > 90 && kalAngleY < -90)) {
     kalmanY.setAngle(pitch);
-    compAngleY = pitch;
+    //compAngleY = pitch;
     kalAngleY = pitch;
     gyroYangle = pitch;
   } else
@@ -193,81 +190,35 @@ void loop() {
   //gyroXangle += kalmanX.getRate() * dt; // Calculate gyro angle using the unbiased rate
   //gyroYangle += kalmanY.getRate() * dt;
 
-  compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
-  compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
+  //compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
+  //compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
 
   // Reset the gyro angle when it has drifted too much
   if (gyroXangle < -180 || gyroXangle > 180)
     gyroXangle = kalAngleX;
   if (gyroYangle < -180 || gyroYangle > 180)
     gyroYangle = kalAngleY;
-
-  /* Print Data */
-#if 0 // Set to 1 to activate
-  //Serial.print(accX); //Serial.print("\t");
-  //Serial.print(accY); //Serial.print("\t");
-  //Serial.print(accZ); //Serial.print("\t");
-
-  //Serial.print(gyroX); //Serial.print("\t");
-  //Serial.print(gyroY); //Serial.print("\t");
-  //Serial.print(gyroZ); //Serial.print("\t");
-
-  //Serial.print("\t");
-#endif
-
-  //Serial.print(roll); //Serial.print("\t");
-  ////Serial.print(gyroXangle); //Serial.print("\t");
-  ////Serial.print(compAngleX); //Serial.print("\t");
-  //Serial.print(kalAngleX); //Serial.print("\t");
-
-  //Serial.print("\t");
-
-  ////Serial.print(pitch); //Serial.print("\t");
-  ////Serial.print(gyroYangle); //Serial.print("\t");
-  ////Serial.print(compAngleY); //Serial.print("\t");
-  ////Serial.print(kalAngleY); //Serial.print("\t");
-
-#if 0 // Set to 1 to print the temperature
-  //Serial.print("\t");
-
-  double temperature = (double)tempRaw / 340.0 + 36.53;
-  //Serial.print(temperature); //Serial.print("\t");
-#endif
-
-  //Serial.print("\r\n");
+  contador++;
   delay(2);
-  if(micros() - Tant < Ts){
+  if(micros() - Tant >= Ts){
+    //Serial.print(micros()-Tant); Serial.print("\t");
+    //Serial.println(getKalmanAngle());
     Tant = micros();
-    Serial.print(getKalmanAngle()); Serial.print("\t");
+    RX();
+    TX();
+    /*Serial.print(getKalmanAngle()); Serial.print("\t");
     Serial.print(acaoA); Serial.print("\t");
     Serial.print(acaoP); Serial.print("\t");
     Serial.print(acaoI); Serial.print("\t");
     Serial.println(acaoD); Serial.print("\t");
-    /*Serial.print(pwmA); Serial.print("\t");
+    Serial.print(pwmA); Serial.print("\t");
     Serial.print(pwmB); Serial.print("\t");
     Serial.print(correnteA); Serial.print("\t");
     Serial.println(correnteB);*/
-    
     acaoMedia = 50;
-    if(((millis()/10000)%4) == 0){
-      setpoint = -12;
-    } else if(((millis()/10000)%4) == 1) {
-      setpoint = 0;
-    } else if(((millis()/10000)%4) == 2) {
-      setpoint = 12;
-    } else if(((millis()/10000)%4) == 3) {
-      setpoint = 0;
-    }
     setpoint = 0;
-    
     controlAngle();
-    
-    /*Serial.print(getKalmanAngle()); Serial.print("\t");
-    Serial.print(acaoA); Serial.print("\t");
-    Serial.println(acaoB);*/
-  }
-  //myservoA.write(acaoA);
-  //myservoB.write(acaoB); 
+  } 
   setMotor();
 }
 
@@ -279,8 +230,6 @@ void controlAngle(){
   erro[1] = erro[0];
   erro[0] = setpoint - getKalmanAngle();
   
-  
-  //acaoDelta = Kp*erro[0];
   #if algoritmoVelocidade
   acaoInst = q0*erro[0] + q1*erro[1] + q2*erro[2];
   acaoDelta = acaoDelta + acaoInst;
@@ -439,7 +388,7 @@ void setMotor(){
 
 bool RX(){
   if(Serial.available()>0){
-    acaoTeste = Serial.read(); // Variavel que receberá os valores enviados pelo programa em python
+    //acaoTeste = Serial.read(); // Variavel que receberá os valores enviados pelo programa em python
     return 1;
   }
   return 0;
@@ -449,8 +398,16 @@ void TX(){
   byte vetor[3];
   vetor[0]= (byte)SOP;
   /*vetor[1]= (byte)((((uint16_t)pos_y) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)pos_y) & 0x00FF);*/
+  vetor[2]= (byte)(((uint16_t)pos_y) & 0x00FF);
   vetor[1]= (byte)((0x3E8 >> 8) & 0x00FF);
-  vetor[2]= (byte)(0x3E8 & 0x00FF);
+  vetor[2]= (byte)(0x3E8 & 0x00FF);*/
+  vetor[1]= (byte)((((int)(getKalmanAngle()*100)) >> 8) & 0x00FF);
+  vetor[2]= (byte)(((int)(getKalmanAngle()*100)) & 0x00FF);
+  
+  #if python
   Serial.write((uint8_t*)vetor,3);
+  #else
+  //contador++;
+  //Serial.println(contador);
+  #endif
 }
