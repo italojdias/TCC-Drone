@@ -9,8 +9,8 @@ tic = time.time()
 celCarga.write(b"2") #apagar led
 drone.write(bytes([0])) #Acao media
 for i in range(2000):
-    
     data = celCarga.read(nBytesFromCelCarga)
+    # celCarga.reset_input_buffer()
     #If byteorder is "big", the most significant byte is at the beginning of the byte array. 
     #If byteorder is "little", the most significant byte is at the end of the byte array.
     data = int.from_bytes(data, byteorder= 'big') 
@@ -22,6 +22,7 @@ for i in range(2000):
     altitudeEngineering = altitudeEngineering/100
 
     data = drone.read(nBytesFromDrone)
+    # drone.reset_input_buffer()
     data = int.from_bytes(data, byteorder= 'big') 
     anguloHardware = data & 0x00FFFF
     if(anguloHardware>32767):

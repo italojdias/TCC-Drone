@@ -1,3 +1,7 @@
+// --- Constantes Timers Interrupcao ---
+const uint16_t T1_init = 0;
+const uint16_t T1_comp = 625; //625 - 10ms
+
 #define SOP 255
 #define Ts 20000
 #define SecondsT 0.02
@@ -49,6 +53,18 @@ void setup(){
   pinMode(led1, OUTPUT); // Porta onde o led será inserido, configurado como saida
   pinMode(13, OUTPUT);
   while(!RX()); //Travando o script para rodar o loop apenas quando o primeiro bit for recebido
+   //Configurando Interrupcao
+   //Modo de Comparação
+   TCCR1A = 0;
+   //Prescaler 1:256
+   TCCR1B |=  (1 << CS12);
+   TCCR1B &= ~(1 << CS11);
+   TCCR1B &= ~(1 << CS10);
+   //Inicializa Registradores
+   TCNT1 = T1_init;
+   OCR1A = T1_comp;
+   //Habilita Interrupção do Timer1
+   TIMSK1 = (1 << OCIE1A);
   Tant = micros();
 }
 void loop(){
@@ -57,29 +73,7 @@ void loop(){
   }
   Tant = micros();
 
-  potenciometro = analogRead(5);
-  valorRealSensor = analogRead(0);
-  x[0]=x[1];
-  x[1]=x[2];
-  x[2]=x[3];
-  x[3]=valorRealSensor;
-  y[0]=y[1];
-  y[1]=y[2];
-  y[2]=y[3];
-  y[3]= 0.0029*x[3]+0.0087*x[2]+0.0087*x[1]+0.0029*x[0];
-  y[3]= y[3]+2.3741*y[2]-1.9294*y[1]+0.5321*y[0];
   
-  celCargaFiltrada = y[3];
-  gettingPosition();
-  
-  TX();
-  RX();
-  if(leitura == 49){
-    digitalWrite(led1, HIGH); // Liga a porta 13 se o valor recebido for 1
-  }
-  else if(leitura == 50){
-    digitalWrite(led1, LOW); // Desliga a porta 13 se o valor recebido for 2
-  }
   
   /*if(valorRealSensor>500){
     TX();  
@@ -100,8 +94,8 @@ void TX(){
   vetor[0]= (byte)SOP;
   vetor[1]= (byte)((((uint16_t)pos_y) >> 8) & 0x00FF);
   vetor[2]= (byte)(((uint16_t)pos_y) & 0x00FF);
-  vetor[1]= (byte)((((uint16_t)potenciometro) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)potenciometro) & 0x00FF);
+  /*vetor[1]= (byte)((((uint16_t)potenciometro) >> 8) & 0x00FF);
+  vetor[2]= (byte)(((uint16_t)potenciometro) & 0x00FF);*/
   //vetor[1]= (byte)((0x3E8 >> 8) & 0x00FF);
   //vetor[2]= (byte)(0x3E8 & 0x00FF);
   //Serial.flush();
@@ -126,5 +120,34 @@ void gettingPosition(){
     pos_y = pos_y + (veloc_y*SecondsT) + (a_y*SecondsT*SecondsT/2);
     veloc_y = veloc_y + a_y*SecondsT;
   }
-  
 }
+
+// ======================================================================================================
+// --- Interrupção ---
+ISR(TIMER1_COMPA_vect)
+{
+  TCNT1 = T1_init;      //reinicializa TIMER1
+  potenciometro = analogRead(5);
+  valorRealSensor = analogRead(0);
+  x[0]=x[1];
+  x[1]=x[2];
+  x[2]=x[3];
+  x[3]=valorRealSensor;
+  y[0]=y[1];
+  y[1]=y[2];
+  y[2]=y[3];
+  y[3]= 0.0029*x[3]+0.0087*x[2]+0.0087*x[1]+0.0029*x[0];
+  y[3]= y[3]+2.3741*y[2]-1.9294*y[1]+0.5321*y[0];
+  
+  celCargaFiltrada = y[3];
+  gettingPosition();
+  
+  TX();
+  RX();
+  if(leitura == 49){
+    digitalWrite(led1, HIGH); // Liga a porta 13 se o valor recebido for 1
+  }
+  else if(leitura == 50){
+    digitalWrite(led1, LOW); // Desliga a porta 13 se o valor recebido for 2
+  }
+} //end ISR

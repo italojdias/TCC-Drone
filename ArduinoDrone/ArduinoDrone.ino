@@ -1,3 +1,7 @@
+// --- Constantes Timers Interrupcao ---
+const uint16_t T2_init = 0;
+const uint16_t T2_comp = 156; //156 - 10ms
+
 #define SOP 255
 #define Ts 20000
 #define Ts_sec 0.02
@@ -21,22 +25,6 @@ float acaoP, acaoI, acaoD;
 float q0, q1, q2;
 
 int acaoTeste = 0;
-/* Copyright (C) 2012 Kristian Lauszus, TKJ Electronics. All rights reserved.
-
- This software may be distributed and modified under the terms of the GNU
- General Public License version 2 (GPL2) as published by the Free Software
- Foundation and appearing in the file GPL2.TXT included in the packaging of
- this file. Please note that GPL2 Section 2[b] requires that all works based
- on this software must also be made publicly available under the terms of
- the GPL2 ("Copyleft").
-
- Contact information
- -------------------
-
- Kristian Lauszus, TKJ Electronics
- Web      :  http://www.tkjelectronics.com
- e-mail   :  kristianl@tkjelectronics.com
- */
 
 #include <Wire.h>
 #include <Kalman.h> // Source: https://github.com/TKJElectronics/KalmanFilter
@@ -78,6 +66,18 @@ void setup() {
   #else
   while(millis()<5000);
   #endif
+   //Configurando Interrupcao
+   //Modo de Comparação
+   TCCR2A = 0;
+   //Prescaler 1:1024
+   TCCR2B |= (1 << CS22);
+   TCCR2B |= (1 << CS21);
+   TCCR2B |= (1 << CS20);
+   //Inicializa Registradores
+   TCNT2 = T2_init;
+   OCR2A = T2_comp;
+   //Habilita Interrupção do Timer1
+   TIMSK2 = (1 << OCIE2A);
   digitalWrite(13,HIGH);
   
   Wire.begin();
@@ -201,23 +201,7 @@ void loop() {
   contador++;
   delay(2);
   if(micros() - Tant >= Ts){
-    //Serial.print(micros()-Tant); Serial.print("\t");
-    //Serial.println(getKalmanAngle());
-    Tant = micros();
-    RX();
-    TX();
-    /*Serial.print(getKalmanAngle()); Serial.print("\t");
-    Serial.print(acaoA); Serial.print("\t");
-    Serial.print(acaoP); Serial.print("\t");
-    Serial.print(acaoI); Serial.print("\t");
-    Serial.println(acaoD); Serial.print("\t");
-    Serial.print(pwmA); Serial.print("\t");
-    Serial.print(pwmB); Serial.print("\t");
-    Serial.print(correnteA); Serial.print("\t");
-    Serial.println(correnteB);*/
-    acaoMedia = 50;
-    setpoint = 0;
-    controlAngle();
+
   } 
   setMotor();
 }
@@ -411,3 +395,27 @@ void TX(){
   //Serial.println(contador);
   #endif
 }
+
+// ======================================================================================================
+// --- Interrupção ---
+ISR(TIMER2_COMPA_vect)
+{
+  TCNT2 = T2_init;      //reinicializa TIMER1
+  //Serial.print(micros()-Tant); Serial.print("\t");
+  //Serial.println(getKalmanAngle());
+  Tant = micros();
+  RX();
+  TX();
+  /*Serial.print(getKalmanAngle()); Serial.print("\t");
+  Serial.print(acaoA); Serial.print("\t");
+  Serial.print(acaoP); Serial.print("\t");
+  Serial.print(acaoI); Serial.print("\t");
+  Serial.println(acaoD); Serial.print("\t");
+  Serial.print(pwmA); Serial.print("\t");
+  Serial.print(pwmB); Serial.print("\t");
+  Serial.print(correnteA); Serial.print("\t");
+  Serial.println(correnteB);*/
+  acaoMedia = 50;
+  setpoint = 0;
+  controlAngle();
+} //end ISR
