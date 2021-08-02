@@ -41,6 +41,7 @@ int celCargaFiltrada = 700;
 float a_y = 0;
 float veloc_y = 0;
 float pos_y = 0;
+int pos_y_cm = 0;
 bool decolou = 0;
 
 
@@ -92,10 +93,10 @@ bool RX(){
 void TX(){
   byte vetor[3];
   vetor[0]= (byte)SOP;
-  vetor[1]= (byte)((((uint16_t)pos_y) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)pos_y) & 0x00FF);
-  /*vetor[1]= (byte)((((uint16_t)potenciometro) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)potenciometro) & 0x00FF);*/
+  vetor[1]= (byte)((((uint16_t)pos_y_cm) >> 8) & 0x00FF);
+  vetor[2]= (byte)(((uint16_t)pos_y_cm) & 0x00FF);
+  vetor[1]= (byte)((((uint16_t)potenciometro) >> 8) & 0x00FF);
+  vetor[2]= (byte)(((uint16_t)potenciometro) & 0x00FF);
   //vetor[1]= (byte)((0x3E8 >> 8) & 0x00FF);
   //vetor[2]= (byte)(0x3E8 & 0x00FF);
   //Serial.flush();
@@ -120,6 +121,7 @@ void gettingPosition(){
     pos_y = pos_y + (veloc_y*SecondsT) + (a_y*SecondsT*SecondsT/2);
     veloc_y = veloc_y + a_y*SecondsT;
   }
+  pos_y_cm = ((int)(pos_y*100));
 }
 
 // ======================================================================================================

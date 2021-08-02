@@ -26,6 +26,8 @@ float q0, q1, q2;
 
 int acaoTeste = 0;
 
+int pos_y_cm = 0;
+
 #include <Wire.h>
 #include <Kalman.h> // Source: https://github.com/TKJElectronics/KalmanFilter
 #include <Servo.h>
@@ -317,8 +319,8 @@ inline double getKalmanAngle()  {return kalAngleX;}
 void setMotor(){
   // input = porcentagem da corrente
   // output = pwm para os motores
-  acaoA = acaoTeste;
-  acaoB = acaoTeste;
+  acaoA = pos_y_cm/10;
+  acaoB = pos_y_cm/10;
   correnteA = acaoA *4.0/100.0;
   correnteB = acaoB *4.0/100.0;
   /*
@@ -372,6 +374,22 @@ void setMotor(){
 
 bool RX(){
   if(Serial.available()>0){
+    if(Serial.read()==SOP){ //Primeiro byte é o SOP esperado
+      pos_y_cm = Serial.read();
+      pos_y_cm = (pos_y_cm << 8) | Serial.read(); //pos_y em cm
+    }
+    else
+    {
+      //Problema
+      while(1){
+        myservoA.write(17);
+        myservoB.write(17);
+        digitalWrite(13,LOW);
+        delay(500);
+        digitalWrite(13,HIGH);
+        delay(500);
+      }
+    }
     //acaoTeste = Serial.read(); // Variavel que receberá os valores enviados pelo programa em python
     return 1;
   }
