@@ -8,8 +8,8 @@ const uint16_t T1_comp = 625; //625 - 10ms
 #define valorInicial 700
 #define python 1
 
-#define Kcc 0.5
-#define valorEquilibrio 620
+#define Kcc 0.000655
+int valorEquilibrio = 620;
 #define massa 0.200
 #define gravidade 9.8
 
@@ -53,7 +53,22 @@ void setup(){
   Serial.begin(115200);
   pinMode(led1, OUTPUT); // Porta onde o led será inserido, configurado como saida
   pinMode(13, OUTPUT);
-  while(!RX()); //Travando o script para rodar o loop apenas quando o primeiro bit for recebido
+  int i = 0;
+  valorEquilibrio = 0;
+  Tant = millis();
+  while(!RX()) //Travando o script para rodar o loop apenas quando o primeiro bit for recebido
+  { //Setup para descobrir o valor da tara da balança
+    if(millis()-Tant> 250){
+      Tant = millis();
+      valorEquilibrio += analogRead(0);
+      i++;
+    }
+  }
+  valorEquilibrio = valorEquilibrio/i;
+  x[0]=valorEquilibrio;
+  x[1]=valorEquilibrio;
+  x[2]=valorEquilibrio;
+  x[3]=valorEquilibrio;
    //Configurando Interrupcao
    //Modo de Comparação
    TCCR1A = 0;
@@ -73,13 +88,6 @@ void loop(){
     //Travando o script pra só executar depois do tempo de amostragem
   }
   Tant = micros();
-
-  
-  
-  /*if(valorRealSensor>500){
-    TX();  
-  }*/
-  
 }
 
 bool RX(){
@@ -95,11 +103,6 @@ void TX(){
   vetor[0]= (byte)SOP;
   vetor[1]= (byte)((((uint16_t)pos_y_cm) >> 8) & 0x00FF);
   vetor[2]= (byte)(((uint16_t)pos_y_cm) & 0x00FF);
-  vetor[1]= (byte)((((uint16_t)potenciometro) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)potenciometro) & 0x00FF);
-  //vetor[1]= (byte)((0x3E8 >> 8) & 0x00FF);
-  //vetor[2]= (byte)(0x3E8 & 0x00FF);
-  //Serial.flush();
   #if python
   Serial.write((uint8_t*)vetor,3);
   #else
@@ -141,7 +144,8 @@ ISR(TIMER1_COMPA_vect)
   y[3]= 0.0029*x[3]+0.0087*x[2]+0.0087*x[1]+0.0029*x[0];
   y[3]= y[3]+2.3741*y[2]-1.9294*y[1]+0.5321*y[0];
   
-  celCargaFiltrada = y[3];
+  //celCargaFiltrada = y[3]; //butterworth
+  celCargaFiltrada = (x[3]+x[2]+x[1]+x[0])/4; //média móvel
   gettingPosition();
   
   TX();
