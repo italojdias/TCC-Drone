@@ -18,9 +18,9 @@ int pwmA = 17;
 int pwmB = 17;
 int acaoMedia;
 float acaoDelta, acaoInst;
-float setpoint;
-float erro[3]={0,0,0};
-float Kp, Ki, Kd, Ti, Td;
+float setpoint_angle;
+float erro_angle[3]={0,0,0};
+float Kp_angle, Ki_angle, Kd_angle, Ti_angle, Td_angle;
 float acaoP, acaoI, acaoD;
 float q0, q1, q2;
 
@@ -213,17 +213,17 @@ void controlAngle(){
   //input = ângulo
   //output = porcentagem da corrente para os motores
   
-  erro[2] = erro[1];
-  erro[1] = erro[0];
-  erro[0] = setpoint - getKalmanAngle();
+  erro_angle[2] = erro_angle[1];
+  erro_angle[1] = erro_angle[0];
+  erro_angle[0] = setpoint_angle - getKalmanAngle();
   
   #if algoritmoVelocidade
-  acaoInst = q0*erro[0] + q1*erro[1] + q2*erro[2];
+  acaoInst = q0*erro_angle[0] + q1*erro_angle[1] + q2*erro_angle[2];
   acaoDelta = acaoDelta + acaoInst;
   #else
-  acaoP = Kp * erro[0];
-  acaoI += Ki *erro[0];
-  acaoD = Kd *(erro[0]-erro[1]);
+  acaoP = Kp_angle * erro_angle[0];
+  acaoI += Ki_angle *erro_angle[0];
+  acaoD = Kd_angle *(erro_angle[0]-erro_angle[1]);
   
   int Imax = 15;
   if (acaoI > Imax){
@@ -231,7 +231,7 @@ void controlAngle(){
   } else if (acaoI < ((-1)*Imax)){
     acaoI = ((-1)*Imax);
   }
-  if (erro[0]*erro[1]<0){ //Anti-windup / Troca de sinal do erro
+  if (erro_angle[0]*erro_angle[1]<0){ //Anti-windup / Troca de sinal do erro
     acaoI = 0;
   }
 
@@ -265,52 +265,52 @@ void initializingPID(){
   //Ts_sec = 0.02;
 
   //1ª sequencia - 20ms ok
-  //Kp = 0.6;
-  //Ki = 0.4;
-  //Kd = 0.7;
+  //Kp_angle = 0.6;
+  //Ki_angle = 0.4;
+  //Kd_angle = 0.7;
 
   //1ª sequencia - 10ms ok
-  /*Kp = 0.9; // laboratorio
-  Ki = 0.05;// laboratorio
-  Kd = 0.35;// laboratorio*/
-  Kp = 0.9; //casa
-  Ki = 0.8; //casa
-  Kd = 0.5; //casa
-  /*Kp = 2.0;
-  Ki = 0.7;
-  Kd = 1.0;*/
+  /*Kp_angle = 0.9; // laboratorio
+  Ki_angle = 0.05;// laboratorio
+  Kd_angle = 0.35;// laboratorio*/
+  Kp_angle = 0.9; //casa
+  Ki_angle = 0.8; //casa
+  Kd_angle = 0.5; //casa
+  /*Kp_angle = 2.0;
+  Ki_angle = 0.7;
+  Kd_angle = 1.0;*/
 
   #if algoritmoVelocidade
-  Td = Kd/Kp; //Se Kd = 0 -> Td = 0
+  Td_angle = Kd_angle/Kp_angle; //Se Kd_angle = 0 -> Td_angle = 0
   //Conta própria
-  if(Ki==0){
-    Ti = 999999; //Número grande -> infinito
-    q0 = Kp*(1 + (Td/Ts_sec));
-    q1 = -1*Kp* (1 + (2*Td/Ts_sec));
-    q2 = Kp*Td/Ts_sec;
+  if(Ki_angle==0){
+    Ti_angle = 999999; //Número grande -> infinito
+    q0 = Kp_angle*(1 + (Td_angle/Ts_sec));
+    q1 = -1*Kp_angle* (1 + (2*Td_angle/Ts_sec));
+    q2 = Kp_angle*Td_angle/Ts_sec;
   } else {
-    Ti = Kp/Ki; //Se Ki = 0 -> Ti = inf
-    q0 = Kp*(1+ (Ts_sec/(2*Ti))+(Td/Ts_sec));
-    q1 = -1*Kp* (1 - (Ts_sec/(2*Ti)) + (2*Td/Ts_sec));
-    q2 = Kp*Td/Ts_sec;
+    Ti_angle = Kp_angle/Ki_angle; //Se Ki_angle = 0 -> Ti_angle = inf
+    q0 = Kp_angle*(1+ (Ts_sec/(2*Ti_angle))+(Td_angle/Ts_sec));
+    q1 = -1*Kp_angle* (1 - (Ts_sec/(2*Ti_angle)) + (2*Td_angle/Ts_sec));
+    q2 = Kp_angle*Td_angle/Ts_sec;
   }
 
   /*
   //Slide
-  if(Ki==0){
-    Ti = 999999; //Número grande -> infinito
-    q0 = Kp*(1+ (Td/Ts_sec));
-    q1 = (-1)*Kp* (1 + (2*Td/Ts_sec));
-    q2 = Kp* ( (Td/Ts_sec));
+  if(Ki_angle==0){
+    Ti_angle = 999999; //Número grande -> infinito
+    q0 = Kp_angle*(1+ (Td_angle/Ts_sec));
+    q1 = (-1)*Kp_angle* (1 + (2*Td_angle/Ts_sec));
+    q2 = Kp_angle* ( (Td_angle/Ts_sec));
   } else {
-    Ti = Kp/Ki; //Se Ki = 0 -> Ti = inf
-    q0 = Kp*(1+ (Ts_sec/(2*Ti))+(Td/Ts_sec));
-    q1 = (-1)*Kp* (1 + (2*Td/Ts_sec));
-    q2 = Kp* ( (Td/Ts_sec) - (Ts_sec/(2*Ti)));
+    Ti_angle = Kp_angle/Ki_angle; //Se Ki_angle = 0 -> Ti_angle = inf
+    q0 = Kp_angle*(1+ (Ts_sec/(2*Ti_angle))+(Td_angle/Ts_sec));
+    q1 = (-1)*Kp_angle* (1 + (2*Td_angle/Ts_sec));
+    q2 = Kp_angle* ( (Td_angle/Ts_sec) - (Ts_sec/(2*Ti_angle)));
   }*/
   #else
-  Ki = Ki*Ts_sec;
-  Kd = Kd/Ts_sec;
+  Ki_angle = Ki_angle*Ts_sec;
+  Kd_angle = Kd_angle/Ts_sec;
   acaoI = 0;
   #endif
 }
@@ -392,9 +392,9 @@ bool RX(){
       while(1){
         myservoA.write(17);
         myservoB.write(17);
-        digitalWrite(13,LOW);
+        digitalWrite(6,LOW);
         delay(500);
-        digitalWrite(13,HIGH);
+        digitalWrite(6,HIGH);
         delay(500);
       }
     }
@@ -442,6 +442,6 @@ ISR(TIMER2_COMPA_vect)
   Serial.print(correnteA); Serial.print("\t");
   Serial.println(correnteB);*/
   acaoMedia = 50;
-  setpoint = 0;
+  setpoint_angle = 0;
   controlAngle();
 } //end ISR
