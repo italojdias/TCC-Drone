@@ -7,6 +7,8 @@ const uint16_t T2_comp = 156; //156 - 10ms
 #define Ts_sec 0.02
 #define python 0
 #define algoritmoVelocidade 0
+#define identificando 0
+#define validando !identificando
 int contador = 0;
 //float Ts_sec;
 uint32_t Tant;
@@ -55,6 +57,7 @@ uint8_t i2cData[14]; // Buffer for I2C data
 // TODO: Make calibration routine
 
 void setup() {
+  pinMode(6,OUTPUT);
   pinMode(13,OUTPUT);
   digitalWrite(13,LOW);
   Serial.begin(115200);
@@ -319,8 +322,18 @@ inline double getKalmanAngle()  {return kalAngleX;}
 void setMotor(){
   // input = porcentagem da corrente
   // output = pwm para os motores
-  acaoA = pos_y_cm/10;
-  acaoB = pos_y_cm/10;
+  #if validando
+  acaoA = (((int)(millis()/10000))*10)%210;
+  if(acaoA > 100)
+  {
+    acaoB = acaoA - 100;
+    acaoA = 0;
+  }
+  else
+  {
+    acaoB = 0;
+  }
+  #endif
   correnteA = acaoA *4.0/100.0;
   correnteB = acaoB *4.0/100.0;
   /*
@@ -330,18 +343,19 @@ void setMotor(){
   pwmB = (0.4285*pow(correnteB,3)) -(6.2772*pow(correnteB,2)) +(35.3168*correnteB) + 15.4368;
   */
   
-  //12.1V - fonte casa
-  //0.1176   -5.0773   40.0227   14.3006
-  pwmA = (0.1176*pow(correnteA,3)) -(5.0773*pow(correnteA,2)) +(40.0227*correnteA) + 14.3006;
-  //0.3207   -4.7661   30.2759   16.0771
-  pwmB = (0.3207*pow(correnteB,3)) -(4.7661*pow(correnteB,2)) +(30.2759*correnteB) + 16.0771;
-
+  //12.3V - fonte casa - Identificação feita no dia 03/08/2021
+  //0.1750   -5.1728   39.3825   14.2633
+  pwmA = (0.1750*pow(correnteA,3)) -(5.1728*pow(correnteA,2)) +(39.3825*correnteA) + 14.2633;
+  //0.3054   -4.5860   29.5796   15.8273
+  pwmB = (0.3054*pow(correnteB,3)) -(4.5860*pow(correnteB,2)) +(29.5796*correnteB) + 15.8273;
+  
   /*//12.0V - fonte laboratório
   //0.1835   -5.1140   38.8759   13.6487
   correnteA = correnteA + 0.1;
   pwmA = (0.1835*pow(correnteA,3)) -(5.1140*pow(correnteA,2)) +(38.8759*correnteA) + 13.6487;
   //0.3516   -5.0109   30.4850   14.9275
   pwmB = (0.3516*pow(correnteB,3)) -(5.0109*pow(correnteB,2)) +(30.4850*correnteB) + 14.9275;*/
+  #if identificando
   pwmA = (((int)(millis()/10000))*10)%210;
   if(pwmA > 100)
   {
@@ -352,6 +366,7 @@ void setMotor(){
   {
     pwmB = 17;
   }
+  #endif
   if(pwmA < 17){
     pwmA = 17;
   }
@@ -360,6 +375,13 @@ void setMotor(){
   }
   myservoA.write(pwmA);
   myservoB.write(pwmB);
+  if((pwmA>17 && pwmA <170) || (pwmB>17 && pwmB <170))
+  {
+    analogWrite(6,100);
+  }
+  else{
+    analogWrite(6,0);
+  }
   Serial.print(pwmA); Serial.print('\t');
   Serial.println(pwmB);
   /*

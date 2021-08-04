@@ -55,6 +55,7 @@ uint8_t i2cData[14]; // Buffer for I2C data
 // TODO: Make calibration routine
 
 void setup() {
+  pinMode(6,OUTPUT);
   pinMode(13,OUTPUT);
   digitalWrite(13,LOW);
   Serial.begin(115200);
@@ -330,11 +331,11 @@ void setMotor(){
   pwmB = (0.4285*pow(correnteB,3)) -(6.2772*pow(correnteB,2)) +(35.3168*correnteB) + 15.4368;
   */
   
-  //12.1V - fonte casa
-  //0.1176   -5.0773   40.0227   14.3006
-  pwmA = (0.1176*pow(correnteA,3)) -(5.0773*pow(correnteA,2)) +(40.0227*correnteA) + 14.3006;
-  //0.3207   -4.7661   30.2759   16.0771
-  pwmB = (0.3207*pow(correnteB,3)) -(4.7661*pow(correnteB,2)) +(30.2759*correnteB) + 16.0771;
+  //12.3V - fonte casa - Identificação feita no dia 03/08/2021
+  //0.1750   -5.1728   39.3825   14.2633
+  pwmA = (0.1750*pow(correnteA,3)) -(5.1728*pow(correnteA,2)) +(39.3825*correnteA) + 14.2633;
+  //0.3054   -4.5860   29.5796   15.8273
+  pwmB = (0.3054*pow(correnteB,3)) -(4.5860*pow(correnteB,2)) +(29.5796*correnteB) + 15.8273;
 
   /*//12.0V - fonte laboratório
   //0.1835   -5.1140   38.8759   13.6487
@@ -351,6 +352,13 @@ void setMotor(){
   }
   myservoA.write(pwmA);
   myservoB.write(pwmB);
+  if((pwmA>17 && pwmA <170) || (pwmB>17 && pwmB <170))
+  {
+    analogWrite(6,100);
+  }
+  else{
+    analogWrite(6,0);
+  }
   
   /*
   int upperLimit = 170;
