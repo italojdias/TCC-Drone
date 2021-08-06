@@ -10,7 +10,7 @@ const uint16_t T1_comp = 625; //625 - 10ms
 
 #define Kcc 0.000655
 int valorEquilibrio = 620;
-#define massa 0.200
+#define massa 0.300
 #define gravidade 9.8
 
 uint32_t Tant;
@@ -39,8 +39,10 @@ float y[4]={valorInicial,valorInicial,valorInicial,valorInicial};
 int celCargaFiltrada = 700;
 
 float a_y = 0;
+int a_y_int = 0;
 float veloc_y = 0;
 float pos_y = 0;
+float delta_pos_y =0;
 int pos_y_cm = 0;
 bool decolou = 0;
 
@@ -80,7 +82,7 @@ void setup(){
    TCNT1 = T1_init;
    OCR1A = T1_comp;
    //Habilita Interrupção do Timer1
-   TIMSK1 = (1 << OCIE1A);
+   TIMSK1 = (1 << OCIE1A); 
   Tant = micros();
 }
 void loop(){
@@ -99,12 +101,14 @@ bool RX(){
 }
 
 void TX(){
-  byte vetor[3];
+  byte vetor[5];
   vetor[0]= (byte)SOP;
   vetor[1]= (byte)((((uint16_t)pos_y_cm) >> 8) & 0x00FF);
   vetor[2]= (byte)(((uint16_t)pos_y_cm) & 0x00FF);
+  vetor[3]= (byte)((((uint16_t)a_y_int) >> 8) & 0x00FF);
+  vetor[4]= (byte)(((uint16_t)a_y_int) & 0x00FF);
   #if python
-  Serial.write((uint8_t*)vetor,3);
+  Serial.write((uint8_t*)vetor,5);
   #else
   /*Serial.print(pos_y);Serial.print("\t");
   Serial.print(veloc_y);Serial.print("\t");
@@ -121,9 +125,11 @@ void gettingPosition(){
   if(decolou == 0){
     a_y = 0;
   } else {
-    pos_y = pos_y + (veloc_y*SecondsT) + (a_y*SecondsT*SecondsT/2);
-    veloc_y = veloc_y + a_y*SecondsT;
+    delta_pos_y = (veloc_y*SecondsT) + (a_y*SecondsT*SecondsT/2);
+    pos_y = pos_y + delta_pos_y;
+    veloc_y = veloc_y + a_y*SecondsT;   
   }
+  a_y_int = ((int)(a_y*100));
   pos_y_cm = ((int)(pos_y*100));
 }
 
