@@ -63,7 +63,7 @@ for i in range(3000):
     drone.reset_input_buffer()
     dataIntDrone = int.from_bytes(dataByteDrone, byteorder= 'big') 
     anguloHardware = gettingSignal(dataIntDrone, nBytesFromDrone, 1, 2)
-    anguloEngineering = unsignedToSigned(anguloHardware)/100
+    anguloEngineering = unsignedToSigned(anguloHardware, 2)/100
 
     acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
     acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
