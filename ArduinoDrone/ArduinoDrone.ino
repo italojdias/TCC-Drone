@@ -299,12 +299,12 @@ void initializingPID(){
   /*Kp_angle = 2.0;
   Ki_angle = 0.7;
   Kd_angle = 1.0;*/
-  Kp_altitude = 0.06; //0.10 05/08 as 21:21
-  Ki_altitude = 0.01;//0.032 05/08 as 21:21
-  Kd_altitude = 0.08;//0.04 05/08 as 21:21
+  Kp_altitude = 0.1; //0.10 05/08 as 21:21
+  Ki_altitude = 0.008;//0.032 05/08 as 21:21
+  Kd_altitude = 0.10;//0.04 05/08 as 21:21
   acao_max_altitude = 80;
   acaoI_max_altitude = 70;
-  acaoI_altitude = 25;
+  acaoI_altitude = 30;
 
   #if algoritmoVelocidade
   Td_angle = Kd_angle/Kp_angle; //Se Kd_angle = 0 -> Td_angle = 0
@@ -420,6 +420,7 @@ bool RX(){
       Serial.read();  //Apenas para tirar da Serial a a_y
       setpoint_altitude = Serial.read();
       setpoint_altitude = setpoint_altitude*100;
+      setpoint_angle = Serial.read();
     }
     /*else
     {
@@ -447,9 +448,9 @@ void TX(){
   vetor[2]= (byte)(0x3E8 & 0x00FF);*/
   vetor[1]= (byte)((((int)(getKalmanAngle()*100)) >> 8) & 0x00FF);
   vetor[2]= (byte)(((int)(getKalmanAngle()*100)) & 0x00FF);
-  vetor[3]= (byte)(((int)(acaoP_altitude)) & 0x00FF);
-  vetor[4]= (byte)(((int)(acaoI_altitude)) & 0x00FF);
-  vetor[5]= (byte)(((int)(acaoD_altitude)) & 0x00FF);
+  vetor[3]= (byte)(((int)(acaoP_angle)) & 0x00FF);
+  vetor[4]= (byte)(((int)(acaoI_angle)) & 0x00FF);
+  vetor[5]= (byte)(((int)(acaoD_angle)) & 0x00FF);
   
   #if python
   Serial.write((uint8_t*)vetor,6);

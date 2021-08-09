@@ -17,7 +17,7 @@ def gettingSignal(msg, nBytesOfMsg, firstByteOfSignal, sizeByteOfSignal):
     signal = msg & mask
     return signal
 
-file = open("Data.txt","w")
+file = open("Resultados\\ControleAltitude\\Data.txt","w")
 
 celCarga = serial.Serial('COM3', 115200)
 drone = serial.Serial('COM4', 115200)
@@ -26,8 +26,10 @@ drone.timeout = 0.010
 nBytesFromCelCarga = 5
 nBytesFromDrone = 6
 altitude = []
+angle = []
 tempo = []
 setpoint_altitude = []
+setpoint_angle = []
 time.sleep(5)
 celCarga.reset_input_buffer()
 celCarga.reset_output_buffer()
@@ -45,6 +47,7 @@ for i in range(4500):
         setpoint_altitude.append(8)
     else:
         setpoint_altitude.append(5)
+    setpoint_angle.append(0)
     ##############RX##############
     dataByteCelCarga = celCarga.read(nBytesFromCelCarga)
     celCarga.reset_input_buffer()
@@ -69,6 +72,7 @@ for i in range(4500):
 
             anguloHardware = gettingSignal(dataIntDrone, nBytesFromDrone, 1, 2)
             anguloEngineering = unsignedToSigned(anguloHardware, 2)/100
+            angle.append(anguloEngineering)
             acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
             acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
             acaoD = gettingSignal(dataIntDrone, nBytesFromDrone, 5, 1)
@@ -81,12 +85,14 @@ for i in range(4500):
                     drone.reset_output_buffer()
                     drone.write(dataByteCelCarga)
                     drone.write(bytes([setpoint_altitude[-1]]))
+                    drone.write(bytes([setpoint_angle[-1]]))
                 else: # Falha: altitude variou muito de uma iteração para outra ou aceleração muito alta
                     altitude[-1] = altitude[-2]
             elif abs(aceleracaoEngineering) < 20:
                 drone.reset_output_buffer()
                 drone.write(dataByteCelCarga)
                 drone.write(bytes([setpoint_altitude[-1]]))
+                drone.write(bytes([setpoint_angle[-1]]))
         else:
             SOP_counter += 3
             altitude.append(altitude[-1])
@@ -107,7 +113,7 @@ for i in range(4500):
 
     toc = time.time()
     tempo.append(toc-tic)
-    print(altitude[-1], "\t", altitudeEngineering, "\t", aceleracaoEngineering, "\t", acaoP, "\t", acaoI, "\t", acaoD, "\t", toc-tic, "\t", MM_counter, "\t", SOP_counter)
+    print(altitude[-1], "\t", setpoint_altitude[-1], "\t", acaoP, "\t", acaoI, "\t", acaoD, "\t", toc-tic, "\t", MM_counter, "\t", SOP_counter)
     # print(str(altitudeEngineering) + "\t" + str(anguloEngineering) + "\t" + str(i) + "\t" + str(toc-tic))
 
 drone.write(bytes([0])) #Acao media
@@ -115,9 +121,13 @@ drone.close()
 celCarga.close()
 file.write("altitude = " + str(altitude))
 file.write("\nsetpoint_altitude = " + str(setpoint_altitude))
+file.write("\nangle = " + str(angle))
+file.write("\nsetpoint_angle = " + str(setpoint_angle))
 file.write("\ntempo = " + str(tempo))
 file.close()
 
 plt.plot(altitude)
 plt.plot(setpoint_altitude)
+# plt.plot(angle)
+# plt.plot(setpoint_angle)
 plt.show()
