@@ -223,11 +223,11 @@ void controlAltitude(){
   
   acaoP_altitude = Kp_altitude * erro_altitude[0];
   acaoI_altitude += Ki_altitude * erro_altitude[0];
-  if((erro_altitude[0] < 200) && (erro_altitude[0] > -200)){
+  /*if((erro_altitude[0] < 200) && (erro_altitude[0] > -200)){
     acaoD_altitude = Kd_altitude * (erro_altitude[0] - erro_altitude[1]);
   } else{
     acaoD_altitude = 0;
-  }
+  }*/
   acaoD_altitude = Kd_altitude * (erro_altitude[0] - erro_altitude[1]);
   
 
@@ -299,11 +299,12 @@ void initializingPID(){
   /*Kp_angle = 2.0;
   Ki_angle = 0.7;
   Kd_angle = 1.0;*/
-  Kp_altitude = 0.10; //0.10 05/08 as 21:21
-  Ki_altitude = 0.032;//0.032 05/08 as 21:21
-  Kd_altitude = 0.04;//0.04 05/08 as 21:21
+  Kp_altitude = 0.06; //0.10 05/08 as 21:21
+  Ki_altitude = 0.01;//0.032 05/08 as 21:21
+  Kd_altitude = 0.08;//0.04 05/08 as 21:21
   acao_max_altitude = 80;
   acaoI_max_altitude = 70;
+  acaoI_altitude = 25;
 
   #if algoritmoVelocidade
   Td_angle = Kd_angle/Kp_angle; //Se Kd_angle = 0 -> Td_angle = 0
@@ -340,7 +341,7 @@ void initializingPID(){
 
   Ki_altitude = Ki_altitude*Ts_sec;
   Kd_altitude = Kd_altitude/Ts_sec;
-  acaoI_altitude = 40;
+  
   #endif
 }
 
@@ -358,24 +359,27 @@ void setMotor(){
   pwmB = (0.4285*pow(correnteB,3)) -(6.2772*pow(correnteB,2)) +(35.3168*correnteB) + 15.4368;
   */
   
-  //12.3V - fonte casa - Identificação feita no dia 03/08/2021
+  /*//12.3V - fonte casa - Identificação feita no dia 03/08/2021
   //0.1750   -5.1728   39.3825   14.2633
   pwmA = (0.1750*pow(correnteA,3)) -(5.1728*pow(correnteA,2)) +(39.3825*correnteA) + 14.2633;
   //0.3054   -4.5860   29.5796   15.8273
-  pwmB = (0.3054*pow(correnteB,3)) -(4.5860*pow(correnteB,2)) +(29.5796*correnteB) + 15.8273;
+  pwmB = (0.3054*pow(correnteB,3)) -(4.5860*pow(correnteB,2)) +(29.5796*correnteB) + 15.8273;*/
 
-  /*//12.0V - fonte laboratório
-  //0.1835   -5.1140   38.8759   13.6487
-  correnteA = correnteA + 0.1;
-  pwmA = (0.1835*pow(correnteA,3)) -(5.1140*pow(correnteA,2)) +(38.8759*correnteA) + 13.6487;
-  //0.3516   -5.0109   30.4850   14.9275
-  pwmB = (0.3516*pow(correnteB,3)) -(5.0109*pow(correnteB,2)) +(30.4850*correnteB) + 14.9275;*/
+  //12.6V - fonte laboratório
+  //0.2996   -5.8052   39.6417   14.3045
+  pwmA = (0.2996*pow(correnteA,3)) -(5.8052*pow(correnteA,2)) +(39.6417*correnteA) + 14.3045;
+  //0.2977   -4.5052   29.1644   16.0212
+  pwmB = (0.2977*pow(correnteB,3)) -(4.5052*pow(correnteB,2)) +(29.1644*correnteB) + 16.0212;
   
   if(pwmA < 17){
     pwmA = 17;
+  } else if (pwmA >100){
+    pwmA = 100;
   }
   if(pwmB < 17){
     pwmB = 17;
+  } else if (pwmB > 100){
+    pwmB = 100;
   }
   myservoA.write(pwmA);
   myservoB.write(pwmB);
@@ -414,8 +418,10 @@ bool RX(){
       pos_y_cm = (pos_y_cm << 8) | Serial.read(); //pos_y em cm
       Serial.read();  //Apenas para tirar da Serial a a_y
       Serial.read();  //Apenas para tirar da Serial a a_y
+      setpoint_altitude = Serial.read();
+      setpoint_altitude = setpoint_altitude*100;
     }
-    else
+    /*else
     {
       //Problema
       while(1){
@@ -426,7 +432,7 @@ bool RX(){
         digitalWrite(6,HIGH);
         delay(500);
       }
-    }
+    }*/
     return 1;
   }
   return 0;
@@ -457,7 +463,7 @@ ISR(TIMER2_COMPA_vect)
   TCNT2 = T2_init;      //reinicializa TIMER1
   //Serial.print(micros()-Tant); Serial.print("\t");
   //Serial.println(getKalmanAngle());
-  Tant = micros();
+  //Tant = micros();
   RX();
   TX();
   /*Serial.print(getKalmanAngle()); Serial.print("\t");
@@ -471,10 +477,10 @@ ISR(TIMER2_COMPA_vect)
   Serial.println(correnteB);*/
 
   setpoint_angle = 0;
-  setpoint_altitude = 800;
+  /*setpoint_altitude = 500;
   if(millis()>18000){
-    setpoint_altitude = 500;
-  }
+    setpoint_altitude = 800;
+  }*/
   //setpoint_altitude = ((millis() - 5000)/20)+100;
   
   controlAltitude();

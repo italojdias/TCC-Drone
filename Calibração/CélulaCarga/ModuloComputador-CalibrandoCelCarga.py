@@ -15,7 +15,7 @@ drone.reset_output_buffer()
 tic = time.time()
 celCarga.write(b"2") #apagar led
 drone.write(bytes([255])) #enviando SOP
-for acaoMedia in range(10,110,10):
+for acaoMedia in range(20,110,10):
     soma = 0
     dadosCelCarga = []
     for i in range(1500):

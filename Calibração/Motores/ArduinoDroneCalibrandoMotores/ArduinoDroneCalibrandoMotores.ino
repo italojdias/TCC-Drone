@@ -343,18 +343,18 @@ void setMotor(){
   pwmB = (0.4285*pow(correnteB,3)) -(6.2772*pow(correnteB,2)) +(35.3168*correnteB) + 15.4368;
   */
   
-  //12.3V - fonte casa - Identificação feita no dia 03/08/2021
+  /*//12.3V - fonte casa - Identificação feita no dia 03/08/2021
   //0.1750   -5.1728   39.3825   14.2633
   pwmA = (0.1750*pow(correnteA,3)) -(5.1728*pow(correnteA,2)) +(39.3825*correnteA) + 14.2633;
   //0.3054   -4.5860   29.5796   15.8273
-  pwmB = (0.3054*pow(correnteB,3)) -(4.5860*pow(correnteB,2)) +(29.5796*correnteB) + 15.8273;
+  pwmB = (0.3054*pow(correnteB,3)) -(4.5860*pow(correnteB,2)) +(29.5796*correnteB) + 15.8273;*/
   
-  /*//12.0V - fonte laboratório
-  //0.1835   -5.1140   38.8759   13.6487
+  //12.6V - fonte laboratório
+  //0.2996   -5.8052   39.6417   14.3045
   correnteA = correnteA + 0.1;
-  pwmA = (0.1835*pow(correnteA,3)) -(5.1140*pow(correnteA,2)) +(38.8759*correnteA) + 13.6487;
-  //0.3516   -5.0109   30.4850   14.9275
-  pwmB = (0.3516*pow(correnteB,3)) -(5.0109*pow(correnteB,2)) +(30.4850*correnteB) + 14.9275;*/
+  pwmA = (0.2996*pow(correnteA,3)) -(5.8052*pow(correnteA,2)) +(39.6417*correnteA) + 14.3045;
+  //0.2977   -4.5052   29.1644   16.0212
+  pwmB = (0.2977*pow(correnteB,3)) -(4.5052*pow(correnteB,2)) +(29.1644*correnteB) + 16.0212;
   #if identificando
   pwmA = (((int)(millis()/10000))*10)%210;
   if(pwmA > 100)

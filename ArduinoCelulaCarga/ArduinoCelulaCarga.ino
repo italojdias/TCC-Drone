@@ -3,14 +3,14 @@ const uint16_t T1_init = 0;
 const uint16_t T1_comp = 625; //625 - 10ms
 
 #define SOP 255
-#define Ts 20000
-#define SecondsT 0.02
+#define Ts 10000
+#define SecondsT 0.01
 #define valorInicial 700
 #define python 1
 
-#define Kcc 0.000655
+#define Kcc 0.000590
 int valorEquilibrio = 620;
-#define massa 0.300
+#define massa 0.200
 #define gravidade 9.8
 
 uint32_t Tant;
@@ -105,8 +105,12 @@ void TX(){
   vetor[0]= (byte)SOP;
   vetor[1]= (byte)((((uint16_t)pos_y_cm) >> 8) & 0x00FF);
   vetor[2]= (byte)(((uint16_t)pos_y_cm) & 0x00FF);
+  /*vetor[1]= (byte)((((uint16_t)200) >> 8) & 0x00FF);
+  vetor[2]= (byte)(((uint16_t)200) & 0x00FF);*/
   vetor[3]= (byte)((((uint16_t)a_y_int) >> 8) & 0x00FF);
   vetor[4]= (byte)(((uint16_t)a_y_int) & 0x00FF);
+  /*vetor[3]= (byte)((((uint16_t)5) >> 8) & 0x00FF);
+  vetor[4]= (byte)(((uint16_t)5) & 0x00FF);*/
   #if python
   Serial.write((uint8_t*)vetor,5);
   #else
@@ -147,11 +151,11 @@ ISR(TIMER1_COMPA_vect)
   y[0]=y[1];
   y[1]=y[2];
   y[2]=y[3];
-  y[3]= 0.0029*x[3]+0.0087*x[2]+0.0087*x[1]+0.0029*x[0];
-  y[3]= y[3]+2.3741*y[2]-1.9294*y[1]+0.5321*y[0];
+  y[3]= (0.0029*x[3])+(0.0087*x[2])+(0.0087*x[1])+(0.0029*x[0]);
+  y[3]= y[3]+(2.3741*y[2])-(1.9294*y[1])+(0.5321*y[0]);
   
-  //celCargaFiltrada = y[3]; //butterworth
-  celCargaFiltrada = (x[3]+x[2]+x[1]+x[0])/4; //média móvel
+  celCargaFiltrada = y[3]; //butterworth
+  //celCargaFiltrada = (x[3]+x[2]+x[1]+x[0])/4; //média móvel
   gettingPosition();
   
   TX();
