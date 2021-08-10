@@ -23,6 +23,7 @@ float Kp_angle, Ki_angle, Kd_angle, Ti_angle, Td_angle;
 float acaoP_angle, acaoI_angle, acaoD_angle;
 int acao_max_angle = 30;
 int acaoI_max_angle = 15;
+int acaoD_max_angle = 15;
 float q0, q1, q2;
 
 int setpoint_altitude;
@@ -267,9 +268,14 @@ void controlAngle(){
   } else if (acaoI_angle < ((-1)*acaoI_max_angle)){
     acaoI_angle = ((-1)*acaoI_max_angle);
   }
-  if (erro_angle[0]*erro_angle[1]<0){ //Anti-windup / Troca de sinal do erro
-    acaoI_angle = 0;
+  if (acaoD_angle > acaoD_max_angle){
+    acaoD_angle = acaoD_max_angle;
+  } else if (acaoD_angle < ((-1)*acaoD_max_angle)){
+    acaoD_angle = ((-1)*acaoD_max_angle);
   }
+  /*if (erro_angle[0]*erro_angle[1]<0){ //Anti-windup / Troca de sinal do erro
+    acaoI_angle = 0;
+  }*/
 
   acao_angle = acaoP_angle + acaoI_angle + acaoD_angle;
   #endif
@@ -293,9 +299,13 @@ void initializingPID(){
   /*Kp_angle = 0.9; // laboratorio
   Ki_angle = 0.05;// laboratorio
   Kd_angle = 0.35;// laboratorio*/
-  Kp_angle = 0.9; //casa
-  Ki_angle = 0.8; //casa
-  Kd_angle = 0.5; //casa
+  Kp_angle = 0.8; //0.5   //0.5
+  Ki_angle = 0.2; //0.12  //0.5
+  Kd_angle = 0.3; //0.20  //0.3
+  acaoI_angle = 0;
+  acao_max_angle = 30;
+  acaoI_max_angle = 50;
+  acaoD_max_angle = 50;
   /*Kp_angle = 2.0;
   Ki_angle = 0.7;
   Kd_angle = 1.0;*/
@@ -308,7 +318,7 @@ void initializingPID(){
 
   #if algoritmoVelocidade
   Td_angle = Kd_angle/Kp_angle; //Se Kd_angle = 0 -> Td_angle = 0
-  //Conta própria
+  /*//Conta própria
   if(Ki_angle==0){
     Ti_angle = 999999; //Número grande -> infinito
     q0 = Kp_angle*(1 + (Td_angle/Ts_sec));
@@ -319,9 +329,8 @@ void initializingPID(){
     q0 = Kp_angle*(1+ (Ts_sec/(2*Ti_angle))+(Td_angle/Ts_sec));
     q1 = -1*Kp_angle* (1 - (Ts_sec/(2*Ti_angle)) + (2*Td_angle/Ts_sec));
     q2 = Kp_angle*Td_angle/Ts_sec;
-  }
+  }*/
 
-  /*
   //Slide
   if(Ki_angle==0){
     Ti_angle = 999999; //Número grande -> infinito
@@ -333,11 +342,11 @@ void initializingPID(){
     q0 = Kp_angle*(1+ (Ts_sec/(2*Ti_angle))+(Td_angle/Ts_sec));
     q1 = (-1)*Kp_angle* (1 + (2*Td_angle/Ts_sec));
     q2 = Kp_angle* ( (Td_angle/Ts_sec) - (Ts_sec/(2*Ti_angle)));
-  }*/
+  }
   #else
   Ki_angle = Ki_angle*Ts_sec;
   Kd_angle = Kd_angle/Ts_sec;
-  acaoI_angle = 0;
+  
 
   Ki_altitude = Ki_altitude*Ts_sec;
   Kd_altitude = Kd_altitude/Ts_sec;
@@ -350,8 +359,8 @@ inline double getKalmanAngle()  {return kalAngleX;}
 void setMotor(){
   // input = porcentagem da corrente
   // output = pwm para os motores
-  correnteA = (acaoA + 0.2) *4.0/100.0;
-  correnteB = (acaoB + 0.2) *4.0/100.0;
+  correnteA = (acaoA) *4.0/100.0;
+  correnteB = (acaoB) *4.0/100.0;
   /*
   //0,978846550482554  -12,3656561004757 61,3473567757761  12,3936804899468
   pwmA = (0.9788*pow(correnteA,3)) -(12.3657*pow(correnteA,2)) +(61.3474*correnteA) + 12.3937;
@@ -477,18 +486,25 @@ ISR(TIMER2_COMPA_vect)
   Serial.print(correnteA); Serial.print("\t");
   Serial.println(correnteB);*/
 
-  setpoint_angle = 0;
+  //setpoint_angle = 0;
   /*setpoint_altitude = 500;
   if(millis()>18000){
     setpoint_altitude = 800;
   }*/
   //setpoint_altitude = ((millis() - 5000)/20)+100;
   
-  controlAltitude();
+  //controlAltitude();
   
-  //controlAngle();
+  controlAngle();
 
-  acao_angle = 0;
+  acao_altitude = 50;
+  /*if(acao_angle>0){
+    acaoA = acao_altitude + acao_angle;
+    acaoB = acao_altitude;
+  } else {
+    acaoA = acao_altitude;
+    acaoB = acao_altitude - acao_angle;
+  }*/
   acaoA = acao_altitude + acao_angle;
   acaoB = acao_altitude - acao_angle;
 

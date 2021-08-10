@@ -17,7 +17,7 @@ def gettingSignal(msg, nBytesOfMsg, firstByteOfSignal, sizeByteOfSignal):
     signal = msg & mask
     return signal
 
-file = open("Resultados\\ControleAltitude\\Data.txt","w")
+file = open("Resultados\\ControleAngulo\\Data.txt","w")
 
 celCarga = serial.Serial('COM3', 115200)
 drone = serial.Serial('COM4', 115200)
@@ -40,7 +40,7 @@ celCarga.write(b"2") #apagar led
 drone.write(bytes([255])) #enviando SOP
 MM_counter = 0
 SOP_counter = 0
-for i in range(4500):
+for i in range(2000):
     if i<1500:
         setpoint_altitude.append(5)
     elif i<3000:
@@ -113,7 +113,7 @@ for i in range(4500):
 
     toc = time.time()
     tempo.append(toc-tic)
-    print(altitude[-1], "\t", setpoint_altitude[-1], "\t", acaoP, "\t", acaoI, "\t", acaoD, "\t", toc-tic, "\t", MM_counter, "\t", SOP_counter)
+    print(angle[-1], "\t", setpoint_angle[-1], "\t", acaoP, "\t", acaoI, "\t", acaoD, "\t", toc-tic, "\t", MM_counter, "\t", SOP_counter)
     # print(str(altitudeEngineering) + "\t" + str(anguloEngineering) + "\t" + str(i) + "\t" + str(toc-tic))
 
 drone.write(bytes([0])) #Acao media
@@ -126,8 +126,8 @@ file.write("\nsetpoint_angle = " + str(setpoint_angle))
 file.write("\ntempo = " + str(tempo))
 file.close()
 
-plt.plot(altitude)
-plt.plot(setpoint_altitude)
-# plt.plot(angle)
-# plt.plot(setpoint_angle)
+# plt.plot(altitude)
+# plt.plot(setpoint_altitude)
+plt.plot(angle)
+plt.plot(setpoint_angle)
 plt.show()
