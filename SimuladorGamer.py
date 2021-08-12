@@ -109,7 +109,7 @@ def gettingSignal(msg, nBytesOfMsg, firstByteOfSignal, sizeByteOfSignal):
     signal = msg & mask
     return signal
 
-teste = 1
+teste = 0
 
 def jogo(): # Ou Experimento
     sair = True
@@ -118,14 +118,14 @@ def jogo(): # Ou Experimento
     altitude = []
     angle = []
     tempo = []
-    setpoint_altitude = 0
+    setpoint_altitude = 3
     setpoint_angle = 0
     data_setpoint_altitude = []
     data_setpoint_angle = []
     dataP = []
     dataI = []
     dataD = []
-    dataAcaoAngle = []
+    dataAcao = []
     MM_counter = 0
     SOP_counter = 0
     if teste == False:
@@ -224,15 +224,15 @@ def jogo(): # Ou Experimento
                     acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
                     acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
                     acaoD = gettingSignal(dataIntDrone, nBytesFromDrone, 5, 1)
-                    acaoAngle = gettingSignal(dataIntDrone, nBytesFromDrone, 6, 1)
+                    acao = gettingSignal(dataIntDrone, nBytesFromDrone, 6, 1)
                     acaoP = unsignedToSigned(acaoP, 1)
                     acaoI = unsignedToSigned(acaoI, 1)
                     acaoD = unsignedToSigned(acaoD, 1)
-                    acaoAngle = unsignedToSigned(acaoAngle, 1)
+                    acao = unsignedToSigned(acao, 1)
                     dataP.append(acaoP)
                     dataI.append(acaoI)
                     dataD.append(acaoD)
-                    dataAcaoAngle.append(acaoAngle)
+                    dataAcao.append(acao)
                     ##########TX##########
                     if len(altitude) > 1:
                         if (abs(altitude[-1] - altitude[-2]) < 1) and (abs(aceleracaoEngineering) < 20): # Só passa a msg para o drone se a diferença de altitude for menor que 1m, isso implica em 100m/s e aceleração menor que 20m/s² ou 2g
@@ -286,13 +286,18 @@ def jogo(): # Ou Experimento
         celCarga.close()
         drone.close()
         plt.figure()
-        plt.plot(altitude)
+        plt.plot(altitude, label = "Altitude")
+        plt.plot(data_setpoint_altitude, label = "Setpoint da Altitude")
+        plt.legend()
         plt.show()
         file.write("altitude = " + str(altitude))
-        file.write("\nsetpoint_altitude = " + str(setpoint_altitude))
+        file.write("\nsetpoint_altitude = " + str(data_setpoint_altitude))
         file.write("\nangle = " + str(angle))
-        file.write("\nsetpoint_angle = " + str(setpoint_angle))
-        file.write("\ndataAcaoAngle = " + str(dataAcaoAngle))
+        file.write("\nsetpoint_angle = " + str(data_setpoint_angle))
+        file.write("\ndataAcao = " + str(dataAcao))
+        file.write("\ndataP = " + str(dataP))
+        file.write("\ndataI = " + str(dataI))
+        file.write("\ndataD = " + str(dataD))
         file.write("\ntempo = " + str(tempo))
         file.close()
 
