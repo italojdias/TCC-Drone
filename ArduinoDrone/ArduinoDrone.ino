@@ -5,8 +5,11 @@ const uint16_t T2_comp = 156; //156 - 10ms
 #define SOP 255
 #define Ts 10000
 #define Ts_sec 0.01
-#define python 1
+#define python 0
 #define algoritmoVelocidade 0
+#define fuzzy 0
+#define controleAngulo 1
+#define controleAltitude 0
 
 uint32_t Tant;
 int acaoA = 0;
@@ -17,8 +20,10 @@ int pwmA = 17;
 int pwmB = 17;
 int acao_altitude;
 float acao_angle, acaoInst;
-float setpoint_angle;
+float setpoint_angle= 0;
 float erro_angle[3]={0,0,0};
+float angle[3] = {0,0,0};
+float aceleracao, delta_Kp, delta_Ki, delta_Kd;
 float Kp_angle, Ki_angle, Kd_angle, Ti_angle, Td_angle;
 float acaoP_angle, acaoI_angle, acaoD_angle;
 int acao_max_angle = 30;
@@ -250,18 +255,62 @@ void controlAltitude(){
 void controlAngle(){
   //input = ângulo
   //output = porcentagem da corrente para os motores
-  
+  angle[2] = angle[1];
+  angle[1] = angle[0];
+  angle[0] = (angle[2] + angle[1] + getKalmanAngle())/3;
   erro_angle[2] = erro_angle[1];
   erro_angle[1] = erro_angle[0];
-  erro_angle[0] = setpoint_angle - getKalmanAngle();
+  erro_angle[0] = setpoint_angle - angle[0];
   
   #if algoritmoVelocidade
   acaoInst = q0*erro_angle[0] + q1*erro_angle[1] + q2*erro_angle[2];
   acao_angle = acao_angle + acaoInst;
   #else
+  #if fuzzy
+  //Fuzzy
+  aceleracao = erro_angle[0] - (2*erro_angle[1]) + erro_angle[2];
+  //P0.5 I0.08 D0.20
+  //P0.5 I0.08*0.010 D0.20/0.010
+  //P0.5 I0.0008 D20
+  if(abs(erro_angle[0]) < 6){ //erro pequeno
+    analogWrite(6,0);
+    if( aceleracao < -0.07 ){ //aceleracao negativa
+      delta_Kp = Kp_angle/3;
+      delta_Ki = (+1)*Ki_angle/3;
+      delta_Kd = Kd_angle/3;
+    } else if ( aceleracao > 0.07) { //aceleracao positiva
+      delta_Kp = 0;
+      delta_Ki = (+1)*Ki_angle/3;
+      delta_Kd = Kd_angle/3;
+    } else { //aceleracao neutra
+      delta_Kp = Kp_angle/3;
+      delta_Ki = 0;
+      delta_Kd = 0;//Kd_angle/3;
+    }
+  } else{ //erro grande
+    analogWrite(6,100);
+    if(aceleracao < -0.07){ //aceleracao negativa
+      delta_Kp = (-1)*Kp_angle/3;
+      delta_Ki = 0;
+      delta_Kd = Kd_angle/3;
+    } else if ( aceleracao > 0.07) { //aceleracao positiva
+      delta_Kp = (-1)*Kp_angle/3;
+      delta_Ki = Ki_angle/3;
+      delta_Kd = Kd_angle/3;
+    } else { //aceleracao neutra
+      delta_Kp = 0;
+      delta_Ki = Ki_angle/3;
+      delta_Kd = (-1)*Kd_angle/3;
+    }
+  }
+  acaoP_angle = (Kp_angle + delta_Kp) * erro_angle[0];
+  acaoI_angle += (Ki_angle + delta_Ki) *erro_angle[0];
+  acaoD_angle = (Kd_angle + delta_Kd) *(erro_angle[0]-erro_angle[1]);
+  #else
   acaoP_angle = Kp_angle * erro_angle[0];
   acaoI_angle += Ki_angle *erro_angle[0];
   acaoD_angle = Kd_angle *(erro_angle[0]-erro_angle[1]);
+  #endif
   
   if (acaoI_angle > acaoI_max_angle){
     acaoI_angle = acaoI_max_angle;
@@ -273,9 +322,9 @@ void controlAngle(){
   } else if (acaoD_angle < ((-1)*acaoD_max_angle)){
     acaoD_angle = ((-1)*acaoD_max_angle);
   }
-  /*if (erro_angle[0]*erro_angle[1]<0){ //Anti-windup / Troca de sinal do erro
+  if (erro_angle[0]*erro_angle[1]<0){ //Anti-windup / Troca de sinal do erro
     acaoI_angle = 0;
-  }*/
+  }
 
   acao_angle = acaoP_angle + acaoI_angle + acaoD_angle;
   #endif
@@ -299,13 +348,15 @@ void initializingPID(){
   /*Kp_angle = 0.9; // laboratorio
   Ki_angle = 0.05;// laboratorio
   Kd_angle = 0.35;// laboratorio*/
-  Kp_angle = 0.8; //0.5   //0.5
-  Ki_angle = 0.2; //0.12  //0.5
-  Kd_angle = 0.3; //0.20  //0.3
+  Kp_angle = 0.6; //0.8; //0.5   //0.5
+  Ki_angle = 0.4;//0.2; //0.12  //0.5
+  Kd_angle = 0.3;//0.3; //0.20  //0.3
+  //0.9 0.10  0.20 - 14:55
+  //0.5 0.25  0.20 - 15:58
   acaoI_angle = 0;
-  acao_max_angle = 30;
-  acaoI_max_angle = 50;
-  acaoD_max_angle = 50;
+  acao_max_angle = 40;
+  acaoI_max_angle = 15;
+  acaoD_max_angle = 15;
   /*Kp_angle = 2.0;
   Ki_angle = 0.7;
   Kd_angle = 1.0;*/
@@ -392,13 +443,13 @@ void setMotor(){
   }
   myservoA.write(pwmA);
   myservoB.write(pwmB);
-  if((pwmA>17 && pwmA <170) || (pwmB>17 && pwmB <170))
+  /*if((pwmA>17 && pwmA <170) || (pwmB>17 && pwmB <170))
   {
     analogWrite(6,100);
   }
   else{
     analogWrite(6,0);
-  }
+  }*/
   
   /*
   int upperLimit = 170;
@@ -422,6 +473,7 @@ void setMotor(){
 
 bool RX(){
   if(Serial.available()>0){
+    #if python
     if(Serial.read()==SOP){ //Primeiro byte é o SOP esperado
       pos_y_cm = Serial.read();
       pos_y_cm = (pos_y_cm << 8) | Serial.read(); //pos_y em cm
@@ -431,38 +483,40 @@ bool RX(){
       setpoint_altitude = setpoint_altitude*100;
       setpoint_angle = Serial.read();
     }
-    /*else
-    {
-      //Problema
-      while(1){
-        myservoA.write(17);
-        myservoB.write(17);
-        digitalWrite(6,LOW);
-        delay(500);
-        digitalWrite(6,HIGH);
-        delay(500);
-      }
-    }*/
+    #else
+    setpoint_angle = 0;
+    #endif
     return 1;
   }
   return 0;
 }
 
 void TX(){
-  byte vetor[6];
+  byte vetor[7];
   vetor[0]= (byte)SOP;
-  /*vetor[1]= (byte)((((uint16_t)pos_y) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)pos_y) & 0x00FF);
-  vetor[1]= (byte)((0x3E8 >> 8) & 0x00FF);
-  vetor[2]= (byte)(0x3E8 & 0x00FF);*/
   vetor[1]= (byte)((((int)(getKalmanAngle()*100)) >> 8) & 0x00FF);
   vetor[2]= (byte)(((int)(getKalmanAngle()*100)) & 0x00FF);
+  #if controleAngulo
   vetor[3]= (byte)(((int)(acaoP_angle)) & 0x00FF);
   vetor[4]= (byte)(((int)(acaoI_angle)) & 0x00FF);
   vetor[5]= (byte)(((int)(acaoD_angle)) & 0x00FF);
+  vetor[6]= (byte)(((int)(acao_angle)) & 0x00FF);
+  #endif
+  #if controleAltitude
+  vetor[3]= (byte)(((int)(acaoP_altitude)) & 0x00FF);
+  vetor[4]= (byte)(((int)(acaoI_altitude)) & 0x00FF);
+  vetor[5]= (byte)(((int)(acaoD_altitude)) & 0x00FF);
+  vetor[6]= (byte)(((int)(acao_altitude)) & 0x00FF);
+  #endif
   
   #if python
-  Serial.write((uint8_t*)vetor,6);
+  Serial.write((uint8_t*)vetor,7);
+  #else
+  Serial.print(getKalmanAngle()); Serial.print('\t');
+  Serial.print(acaoP_angle); Serial.print('\t');
+  Serial.print(acaoI_angle); Serial.print('\t');
+  Serial.print(acaoD_angle); /*Serial.print('\t');
+  Serial.print(aceleracao*100);*/ Serial.print('\n');
   #endif
 }
 
@@ -493,11 +547,19 @@ ISR(TIMER2_COMPA_vect)
   }*/
   //setpoint_altitude = ((millis() - 5000)/20)+100;
   
-  //controlAltitude();
+  #if controleAltitude
+  controlAltitude();
+  #else
+  acao_altitude = 40;
+  #endif
   
+  #if controleAngulo
   controlAngle();
+  #else
+  acao_angle = 0;
+  #endif
 
-  acao_altitude = 50;
+  
   /*if(acao_angle>0){
     acaoA = acao_altitude + acao_angle;
     acaoB = acao_altitude;
@@ -519,5 +581,4 @@ ISR(TIMER2_COMPA_vect)
   } else if(acaoB<0) {
     acaoB = 0;
   }
-
 } //end ISR
