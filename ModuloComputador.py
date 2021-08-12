@@ -24,12 +24,16 @@ drone = serial.Serial('COM4', 115200)
 celCarga.timeout = 0.010
 drone.timeout = 0.010
 nBytesFromCelCarga = 5
-nBytesFromDrone = 6
+nBytesFromDrone = 7
 altitude = []
 angle = []
 tempo = []
 setpoint_altitude = []
 setpoint_angle = []
+dataP = []
+dataI = []
+dataD = []
+dataAcao = []
 time.sleep(5)
 celCarga.reset_input_buffer()
 celCarga.reset_output_buffer()
@@ -47,6 +51,7 @@ for i in range(2000):
         setpoint_altitude.append(8)
     else:
         setpoint_altitude.append(5)
+    # setpoint_altitude.append(int(i/+900)+1)
     setpoint_angle.append(0)
     ##############RX##############
     dataByteCelCarga = celCarga.read(nBytesFromCelCarga)
@@ -76,9 +81,15 @@ for i in range(2000):
             acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
             acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
             acaoD = gettingSignal(dataIntDrone, nBytesFromDrone, 5, 1)
+            acao = gettingSignal(dataIntDrone, nBytesFromDrone, 6, 1)
             acaoP = unsignedToSigned(acaoP, 1)
             acaoI = unsignedToSigned(acaoI, 1)
             acaoD = unsignedToSigned(acaoD, 1)
+            acao = unsignedToSigned(acao, 1)
+            dataP.append(acaoP)
+            dataI.append(acaoI)
+            dataD.append(acaoD)
+            dataAcao.append(acao)
             ##############TX##############
             if len(altitude) > 1:
                 if (abs(altitude[-1] - altitude[-2]) < 1) and (abs(aceleracaoEngineering) < 20): # Só passa a msg para o drone se a diferença de altitude for menor que 1m, isso implica em 100m/s e aceleração menor que 20m/s² ou 2g
@@ -123,11 +134,19 @@ file.write("altitude = " + str(altitude))
 file.write("\nsetpoint_altitude = " + str(setpoint_altitude))
 file.write("\nangle = " + str(angle))
 file.write("\nsetpoint_angle = " + str(setpoint_angle))
+file.write("\ndataAcao = " + str(dataAcao))
+file.write("\ndataP = " + str(dataP))
+file.write("\ndataI = " + str(dataI))
+file.write("\ndataD = " + str(dataD))
 file.write("\ntempo = " + str(tempo))
 file.close()
 
 # plt.plot(altitude)
 # plt.plot(setpoint_altitude)
-plt.plot(angle)
-plt.plot(setpoint_angle)
+plt.plot(angle, label = "angle")
+plt.plot(setpoint_angle, label = "setpoint_angle")
+plt.plot(dataP, label = "dataP")
+plt.plot(dataI, label = "dataI")
+plt.plot(dataD, label = "dataD")
+plt.legend()
 plt.show()
