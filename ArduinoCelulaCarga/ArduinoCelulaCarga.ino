@@ -1,37 +1,18 @@
 // --- Constantes Timers Interrupcao ---
 const uint16_t T1_init = 0;
-const uint16_t T1_comp = 625; //625 - 10ms
+const uint16_t T1_comp = 625; //625 é a constante que equivale a uma interrupção de 10ms
 
 #define SOP 255
-#define Ts 10000
 #define SecondsT 0.01
-#define valorInicial 700
-#define python 1
+#define valorInicial 700 //Valor inicial para iniciar o filtro de butterworth
+#define python 1 
 
-#define Kcc 0.000590
-int valorEquilibrio = 620;
+#define Kcc 0.000590 //Constante encontrada de forma experimental
+int valorEquilibrio = 620; //Valor inicial, mas na função setup esse valor é recalculado
 #define massa 0.200
 #define gravidade 9.8
 
 uint32_t Tant;
-//int Ts = 10000; //ms
-
-//Butterworth fc = 5Hz  fs= 100Hz ordem 3
-// a = 1.0000   -2.3741    1.9294   -0.5321
-// b = 0.0029    0.0087    0.0087    0.0029
-//y[3]= 0.0029*x[3]+0.0087*x[2]+0.0087*x[1]+0.0029*x[0];
-//y[3]= y[3]+2.3741*y[2]-1.9294*y[1]+0.5321*y[0];
-
-//Butterworth fc = 5Hz  fs= 50Hz ordem 3
-// a = 1.0000   -1.7600    1.1829   -0.2781
-// b = 0.0181    0.0543    0.0543    0.0181
-//y[3]= 0.0181*x[3]+0.0543*x[2]+0.0543*x[1]+0.0181*x[0];
-//y[3]= y[3]+1.7600*y[2]-1.1829*y[1]+0.2781*y[0];
-
-//Butterworth fc = 10Hz fs= 50Hz ordem 3
-// a = 1.0000   -0.5772    0.4218   -0.0563
-// b = 0.0985    0.2956    0.2956    0.0985
-// a[0]*y[3] = b[0]*x[3]+ b[1]*x[2]+ b[2]*x[1]+ b[3]*x[0] -a[1]*y[2] -a[2]*y[1] -a[3]*y[0];
 
 float x[4]={valorInicial,valorInicial,valorInicial,valorInicial};
 float y[4]={valorInicial,valorInicial,valorInicial,valorInicial};
@@ -39,7 +20,7 @@ float y[4]={valorInicial,valorInicial,valorInicial,valorInicial};
 int celCargaFiltrada = 700;
 
 float a_y = 0;
-int a_y_int = 0;
+int a_y_int = 0; //a_y_int= a_y * 100
 float veloc_y = 0;
 float pos_y = 0;
 float delta_pos_y =0;
@@ -47,14 +28,13 @@ int pos_y_cm = 0;
 bool decolou = 0;
 
 
-int led1 = 3; // Porta onde o led será inserido
+int led1 = 13; // Porta onde o led será inserido
 int leitura;
 int valorRealSensor = 0;
-int potenciometro;
+
 void setup(){
   Serial.begin(115200);
   pinMode(led1, OUTPUT); // Porta onde o led será inserido, configurado como saida
-  pinMode(13, OUTPUT);
   int i = 0;
   valorEquilibrio = 0;
   Tant = millis();
@@ -71,67 +51,62 @@ void setup(){
   x[1]=valorEquilibrio;
   x[2]=valorEquilibrio;
   x[3]=valorEquilibrio;
-   //Configurando Interrupcao
-   //Modo de Comparação
-   TCCR1A = 0;
-   //Prescaler 1:256
-   TCCR1B |=  (1 << CS12);
-   TCCR1B &= ~(1 << CS11);
-   TCCR1B &= ~(1 << CS10);
-   //Inicializa Registradores
-   TCNT1 = T1_init;
-   OCR1A = T1_comp;
-   //Habilita Interrupção do Timer1
-   TIMSK1 = (1 << OCIE1A); 
-  Tant = micros();
+  
+  //Configurando Interrupcao
+  //Modo de Comparação
+  TCCR1A = 0;
+  //Prescaler 1:256
+  TCCR1B |=  (1 << CS12);
+  TCCR1B &= ~(1 << CS11);
+  TCCR1B &= ~(1 << CS10);
+  //Inicializa Registradores
+  TCNT1 = T1_init;
+  OCR1A = T1_comp;
+  //Habilita Interrupção do Timer1
+  TIMSK1 = (1 << OCIE1A); 
 }
 void loop(){
-  while(micros() - Tant < Ts){
-    //Travando o script pra só executar depois do tempo de amostragem
-  }
-  Tant = micros();
+  //Não faz nada / Toda lógica está dentro da função de interrupçãp
 }
 
 bool RX(){
   if(Serial.available()>0){
     leitura = Serial.read(); // Variavel que receberá os valores enviados pelo programa em python
-    return 1;
+    return 1; // Se o arduino receber algum byte via serial
   }
-  return 0;
+  return 0; // Se o arduino NÃO receber nenhum byte via serial
 }
 
 void TX(){
   byte vetor[5];
+  //Preenchendo o buffer da mensagem para enviar pela serial
   vetor[0]= (byte)SOP;
   vetor[1]= (byte)((((uint16_t)pos_y_cm) >> 8) & 0x00FF);
   vetor[2]= (byte)(((uint16_t)pos_y_cm) & 0x00FF);
-  /*vetor[1]= (byte)((((uint16_t)200) >> 8) & 0x00FF);
-  vetor[2]= (byte)(((uint16_t)200) & 0x00FF);*/
   vetor[3]= (byte)((((uint16_t)a_y_int) >> 8) & 0x00FF);
   vetor[4]= (byte)(((uint16_t)a_y_int) & 0x00FF);
-  /*vetor[3]= (byte)((((uint16_t)5) >> 8) & 0x00FF);
-  vetor[4]= (byte)(((uint16_t)5) & 0x00FF);*/
   #if python
   Serial.write((uint8_t*)vetor,5);
   #else
-  /*Serial.print(pos_y);Serial.print("\t");
+  Serial.print(pos_y);Serial.print("\t");
   Serial.print(veloc_y);Serial.print("\t");
   Serial.print(a_y);Serial.print("\t");
-  Serial.println(celCargaFiltrada);*/
+  Serial.println(celCargaFiltrada);
   #endif
 }
 
 void gettingPosition(){
+  //Convertendo o valor analógico da célula de carga em aceleração
   a_y = ((Kcc*(valorEquilibrio - celCargaFiltrada)) - massa) * gravidade /massa;
-  if(a_y > 0){
+  if(a_y > 0){ //Detectando se o drone já teria decolado
     decolou = 1;
   }
-  if(decolou == 0){
+  if(decolou == 0){ //Posição só começa a variar quando a aceleração resultante é positiva
     a_y = 0;
   } else {
-    delta_pos_y = (veloc_y*SecondsT) + (a_y*SecondsT*SecondsT/2);
+    delta_pos_y = (veloc_y*SecondsT) + (a_y*SecondsT*SecondsT/2); //Equação horária da posição
     pos_y = pos_y + delta_pos_y;
-    veloc_y = veloc_y + a_y*SecondsT;   
+    veloc_y = veloc_y + a_y*SecondsT; //Equação horária da velocidade
   }
   a_y_int = ((int)(a_y*100));
   pos_y_cm = ((int)(pos_y*100));
@@ -142,8 +117,12 @@ void gettingPosition(){
 ISR(TIMER1_COMPA_vect)
 {
   TCNT1 = T1_init;      //reinicializa TIMER1
-  potenciometro = analogRead(5);
-  valorRealSensor = analogRead(0);
+  valorRealSensor = analogRead(0); //Lendo o valor atual da célula de carga
+  
+  //Filtrando a célula de carga usando um Butterworth com as seguintes características
+  //Butterworth fc = 5Hz  fs= 100Hz ordem 3
+  // a = 1.0000   -2.3741    1.9294   -0.5321
+  // b = 0.0029    0.0087    0.0087    0.0029
   x[0]=x[1];
   x[1]=x[2];
   x[2]=x[3];
@@ -155,8 +134,7 @@ ISR(TIMER1_COMPA_vect)
   y[3]= y[3]+(2.3741*y[2])-(1.9294*y[1])+(0.5321*y[0]);
   
   celCargaFiltrada = y[3]; //butterworth
-  //celCargaFiltrada = (x[3]+x[2]+x[1]+x[0])/4; //média móvel
-  gettingPosition();
+  gettingPosition(); //Atualizando a variável com o valor da posição atual
   
   TX();
   RX();

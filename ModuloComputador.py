@@ -32,6 +32,8 @@ setpoint_altitude = []
 setpoint_angle = []
 dataP = []
 dataI = []
+dataA = []
+dataB = []
 dataD = []
 dataAcao = []
 time.sleep(5)
@@ -45,14 +47,15 @@ drone.write(bytes([255])) #enviando SOP
 MM_counter = 0
 SOP_counter = 0
 for i in range(2000):
-    if i<1500:
+    if i<1000:
+        setpoint_angle.append(0)
         setpoint_altitude.append(5)
     elif i<3000:
-        setpoint_altitude.append(8)
+        setpoint_angle.append(0)
+        setpoint_altitude.append(5)
     else:
         setpoint_altitude.append(5)
-    # setpoint_altitude.append(int(i/+900)+1)
-    setpoint_angle.append(0)
+
     ##############RX##############
     dataByteCelCarga = celCarga.read(nBytesFromCelCarga)
     celCarga.reset_input_buffer()
@@ -78,16 +81,20 @@ for i in range(2000):
             anguloHardware = gettingSignal(dataIntDrone, nBytesFromDrone, 1, 2)
             anguloEngineering = unsignedToSigned(anguloHardware, 2)/100
             angle.append(anguloEngineering)
-            acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
-            acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
+            # acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
+            # acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
+            acaoA = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
+            acaoB = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
             acaoD = gettingSignal(dataIntDrone, nBytesFromDrone, 5, 1)
             acao = gettingSignal(dataIntDrone, nBytesFromDrone, 6, 1)
-            acaoP = unsignedToSigned(acaoP, 1)
-            acaoI = unsignedToSigned(acaoI, 1)
+            # acaoP = unsignedToSigned(acaoP, 1)
+            # acaoI = unsignedToSigned(acaoI, 1)
             acaoD = unsignedToSigned(acaoD, 1)
             acao = unsignedToSigned(acao, 1)
-            dataP.append(acaoP)
-            dataI.append(acaoI)
+            # dataP.append(acaoP)
+            # dataI.append(acaoI)
+            dataA.append(acaoA)
+            dataB.append(acaoB)
             dataD.append(acaoD)
             dataAcao.append(acao)
             ##############TX##############
@@ -124,7 +131,7 @@ for i in range(2000):
 
     toc = time.time()
     tempo.append(toc-tic)
-    print(angle[-1], "\t", setpoint_angle[-1], "\t", acaoP, "\t", acaoI, "\t", acaoD, "\t", toc-tic, "\t", MM_counter, "\t", SOP_counter)
+    print(altitude[-1], "\t", angle[-1], "\t", setpoint_angle[-1], "\t", acaoA, "\t", acaoB, "\t", toc-tic, "\t", MM_counter, "\t", SOP_counter)
     # print(str(altitudeEngineering) + "\t" + str(anguloEngineering) + "\t" + str(i) + "\t" + str(toc-tic))
 
 drone.write(bytes([0])) #Acao media
@@ -134,19 +141,36 @@ file.write("altitude = " + str(altitude))
 file.write("\nsetpoint_altitude = " + str(setpoint_altitude))
 file.write("\nangle = " + str(angle))
 file.write("\nsetpoint_angle = " + str(setpoint_angle))
-file.write("\ndataAcao = " + str(dataAcao))
-file.write("\ndataP = " + str(dataP))
-file.write("\ndataI = " + str(dataI))
-file.write("\ndataD = " + str(dataD))
+file.write("\ndataA = " + str(dataA))
+file.write("\ndataB = " + str(dataB))
+# file.write("\ndataAcao = " + str(dataAcao))
+# file.write("\ndataP = " + str(dataP))
+# file.write("\ndataI = " + str(dataI))
+# file.write("\ndataD = " + str(dataD))
 file.write("\ntempo = " + str(tempo))
 file.close()
 
 # plt.plot(altitude)
 # plt.plot(setpoint_altitude)
-plt.plot(angle, label = "angle")
-plt.plot(setpoint_angle, label = "setpoint_angle")
-plt.plot(dataP, label = "dataP")
-plt.plot(dataI, label = "dataI")
-plt.plot(dataD, label = "dataD")
-plt.legend()
+# plt.plot(angle, label = "angle")
+# plt.plot(setpoint_angle, label = "setpoint_angle")
+# plt.plot(dataP, label = "dataP")
+# plt.plot(dataI, label = "dataI")
+# plt.plot(dataD, label = "dataD")
+# plt.legend()
+# plt.show()
+
+fig = plt.figure()
+gs = fig.add_gridspec(2, hspace=0)
+axs = gs.subplots(sharex=True, sharey=False)
+fig.suptitle('Controle Angulo')
+axs[0].plot(angle, label = "angle")
+axs[0].plot(setpoint_angle, label = "setpoint_angle")
+axs[1].plot(dataA, label = "Acao A")
+axs[1].plot(dataB, label = "Acao B")
+# axs[1].plot(dataD, label = "dataD")
+axs[0].set_ylim([-20,20])
+axs[1].set_ylim([0,100])
+axs[0].legend()
+axs[1].legend()
 plt.show()

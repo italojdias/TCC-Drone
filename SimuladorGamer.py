@@ -4,6 +4,7 @@ import serial
 # To install the serial, we need: pip install serial
 from random import randint
 import time
+from datetime import datetime
 import matplotlib.pyplot as plt
 
 #Constantes paras Cores
@@ -34,53 +35,41 @@ font = pygame.font.SysFont(None,15)
 
 def texto(msg, cor,x,y):
     texto1 = font.render(msg,True,cor)
-    # fundo.blit(texto1,[largura/10,altura/2])
     fundo.blit(texto1,[x,y])
-    # fundo.blit(imagemDrone,[largura/2,altura/2])
 
-def draw_drone(pos_x,pos_y):
+def draw_drone(pos_x,pos_y): #Desenha a posição atual do drone em vermelho
     pygame.draw.rect(fundo, red, [pos_x,pos_y,tamanho,tamanho])
     fundo.blit(imagemDrone,[pos_x,pos_y])
 
-# def cobra(CobraXY):
-#     for XY in CobraXY:
-#         pygame.draw.rect(fundo, red, [XY[0],XY[1],tamanho,tamanho])
-#     fundo.blit(imagemDrone,[CobraXY[-1][0],CobraXY[-1][1]])
-
-def draw_setpoint(pos_x,pos_y):
+def draw_setpoint(pos_x,pos_y): #Desenha a posição do setpoint em verde
     pygame.draw.rect(fundo, green, [pos_x,pos_y,tamanho,tamanho])
     fundo.blit(imagemDrone,[pos_x,pos_y])
 
-def geradorAleatorioXY():
-    pos_x = randint(0,(largura-tamanho)/tamanho)*tamanho
-    pos_y = randint(0,(altura-tamanho)/tamanho)*tamanho
-    return [pos_x,pos_y]
-
-
-def m2px(metro):
+def m2px(metro): #Transformando uma medida de metro para pixel
     #Altura: 300px -> 9
     #Altura: 10m seja em altura-30
     #270px é 9m, logo 30px é 1m
     px = (altura - 30) - metro*30
     return px
 
-def ang2px(ang):
+def ang2px(ang):  #Transformando uma medida de ângulo para pixel
     px = (largura/2) + (ang*2)
     return px
 
 def RX(celCarga,drone,nBytesFromCelCarga,nBytesFromDrone):
     dataByteCelCarga = celCarga.read(nBytesFromCelCarga)
-    celCarga.reset_input_buffer()
+    celCarga.reset_input_buffer() #limpando o buffer depois de toda leitura para evitar formação de pilha
     dataByteDrone = drone.read(nBytesFromDrone)
-    drone.reset_input_buffer()
+    drone.reset_input_buffer() #limpando o buffer depois de toda leitura para evitar formação de pilha
     dataIntCelCarga = int.from_bytes(dataByteCelCarga, byteorder= 'big') 
     dataIntDrone = int.from_bytes(dataByteDrone, byteorder= 'big') 
     #If byteorder is "big", the most significant byte is at the beginning of the byte array. 
     #If byteorder is "little", the most significant byte is at the end of the byte array.
-    if dataByteCelCarga != b'' and dataByteDrone != b'' :
+    if dataByteCelCarga != b'' and dataByteDrone != b'' : #Se alguma mensagem for vazia, significa que alguma mensagem não foi transmitida corretamente
         MM_failing = 0
     else:
         MM_failing = 1
+    #Se o SOP for diferente de 255, siginifica que a comunicação não está sincronizada
     if gettingSignal(dataIntCelCarga, nBytesFromCelCarga, 0, 1) == 255 and gettingSignal(dataIntDrone, nBytesFromDrone, 0, 1) == 255:
         SOP_failing = 0
     else:
@@ -89,12 +78,12 @@ def RX(celCarga,drone,nBytesFromCelCarga,nBytesFromDrone):
     return [dataByteCelCarga,dataByteDrone,dataIntCelCarga,dataIntDrone,MM_failing,SOP_failing]
 
 def TX(drone,dataByteCelCarga,setpoint_altitude,setpoint_angle):
-    drone.reset_output_buffer()
+    drone.reset_output_buffer() #Limpando o buffer de output antes da escrita para evitar a formação de pilha
     drone.write(dataByteCelCarga)
     drone.write(bytes([setpoint_altitude]))
     drone.write(bytes([setpoint_angle]))
 
-def unsignedToSigned(value,sizeOfBytes):
+def unsignedToSigned(value,sizeOfBytes): #Função para transformar um sinal unsigned em signed
     range = 2**(sizeOfBytes*8)
     if(value > ((range/2)-1)):
         value = value - range
@@ -102,28 +91,28 @@ def unsignedToSigned(value,sizeOfBytes):
         value = value
     return value
 
-def gettingSignal(msg, nBytesOfMsg, firstByteOfSignal, sizeByteOfSignal):
+def gettingSignal(msg, nBytesOfMsg, firstByteOfSignal, sizeByteOfSignal): #Função para facilitar ler o buffer da mensagem 
     #SOP is allocated on position 0
     mask = (256**sizeByteOfSignal)-1
     msg = msg >> (8*(nBytesOfMsg-firstByteOfSignal-sizeByteOfSignal))
     signal = msg & mask
     return signal
 
-teste = 0
+teste = 0 #Flag para facilitar alguns testes
 
-def jogo(): # Ou Experimento
+def jogo(): #Função que cria a janela da interface
     sair = True
     fimdejogo = False
     angulo = []
     altitude = []
     angle = []
     tempo = []
-    setpoint_altitude = 3
+    setpoint_altitude = 0
     setpoint_angle = 0
     data_setpoint_altitude = []
     data_setpoint_angle = []
-    dataP = []
-    dataI = []
+    dataA = []
+    dataB = []
     dataD = []
     dataAcao = []
     MM_counter = 0
@@ -138,6 +127,7 @@ def jogo(): # Ou Experimento
         drone.timeout = 0.010
 
         time.sleep(5) #Delay para dar tempo de configurar a porta serial
+        #Resetando os buffers
         celCarga.reset_input_buffer()
         celCarga.reset_output_buffer()
         drone.reset_input_buffer()
@@ -146,20 +136,20 @@ def jogo(): # Ou Experimento
         #Enviando a primeira mensagem para os arduinos para começar a comunicação
         celCarga.write(b"2")
         drone.write(bytes([255])) #enviando SOP
-        file = open("Resultados\\ControleAltitude\\Data.txt","w")
+        file = open("Resultados\\ControleAngulo\\Controle2motores\\Data.txt","w")
 
     #posicao inicial do drone
     [pos_x,pos_y] = [ang2px(0), m2px(0)]
 
     i = 0
     while(sair):
-        while fimdejogo:
+        while fimdejogo: #Se o diagnóstico de MM e/ou SOP acusar falha, o usuário pode escolher se repete a simulação ou sai da aplicação
             if teste == False:
                 celCarga.close()
                 drone.close()
 
             fundo.fill(white)
-            texto("Fim de jogo, para continuar tecle C ou S para sair", red,largura/10,altura/2)
+            texto("Fim de jogo, para continuar tecle C ou S para sair", red,largura/10,altura/2) #Mensagem de falha
             pygame.display.update()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -173,46 +163,34 @@ def jogo(): # Ou Experimento
                         fimdejogo = False
         
         for event in pygame.event.get():
-            # print(event)
             if event.type == pygame.QUIT:
                 sair = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:
-                    Kp_angulo += 0.2
-                if event.key == pygame.K_w:
-                    Ki_angulo += 0.005
-                if event.key == pygame.K_e:
-                    Kd_angulo += 1
-                if event.key == pygame.K_a:
-                    Kp_angulo -= 0.2
-                if event.key == pygame.K_s:
-                    Ki_angulo -= 0.005
-                if event.key == pygame.K_d:
-                    Kd_angulo -= 1
                 if event.key == pygame.K_LEFT:
-                    setpoint_angle -= 2
+                    setpoint_angle -= 5
                 if event.key == pygame.K_RIGHT:
-                    setpoint_angle += 2
+                    setpoint_angle += 5
                 if event.key == pygame.K_UP:
                     setpoint_altitude += 2
                 if event.key == pygame.K_DOWN:
                     setpoint_altitude -= 2
-        
+        #Salvando os dados
         data_setpoint_angle.append(setpoint_angle)
         data_setpoint_altitude.append(setpoint_altitude)
 
         if teste == False:
             ####Recebendo a mensagem####
             [dataByteCelCarga,dataByteDrone,dataIntCelCarga,dataIntDrone,MM_failing,SOP_failing] = RX(celCarga,drone,nBytesFromCelCarga,nBytesFromDrone)
-            # print(anguloY)
             if MM_failing == False:
                 if MM_counter > 0:
                     MM_counter -= 1
                 if SOP_failing == False:
                     if SOP_counter > 0:
                         SOP_counter -= 1
+                    #Só atualiza as variáveis se o SOP e o MM não estivere falhando
                     altitudeHardware = gettingSignal(dataIntCelCarga, nBytesFromCelCarga, 1, 2)
                     altitudeEngineering = unsignedToSigned(altitudeHardware, 2)/100
+                    altitudeEngineering = setpoint_altitude
                     altitude.append(altitudeEngineering)
                     aceleracaoHardware = gettingSignal(dataIntCelCarga, nBytesFromCelCarga, 3, 2)
                     aceleracaoHardware = unsignedToSigned(aceleracaoHardware, 2)
@@ -221,18 +199,10 @@ def jogo(): # Ou Experimento
                     anguloHardware = gettingSignal(dataIntDrone, nBytesFromDrone, 1, 2)
                     anguloEngineering = unsignedToSigned(anguloHardware, 2)/100
                     angle.append(anguloEngineering)
-                    acaoP = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
-                    acaoI = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
-                    acaoD = gettingSignal(dataIntDrone, nBytesFromDrone, 5, 1)
-                    acao = gettingSignal(dataIntDrone, nBytesFromDrone, 6, 1)
-                    acaoP = unsignedToSigned(acaoP, 1)
-                    acaoI = unsignedToSigned(acaoI, 1)
-                    acaoD = unsignedToSigned(acaoD, 1)
-                    acao = unsignedToSigned(acao, 1)
-                    dataP.append(acaoP)
-                    dataI.append(acaoI)
-                    dataD.append(acaoD)
-                    dataAcao.append(acao)
+                    acaoA = gettingSignal(dataIntDrone, nBytesFromDrone, 3, 1)
+                    acaoB = gettingSignal(dataIntDrone, nBytesFromDrone, 4, 1)
+                    dataA.append(acaoA)
+                    dataB.append(acaoB)
                     ##########TX##########
                     if len(altitude) > 1:
                         if (abs(altitude[-1] - altitude[-2]) < 1) and (abs(aceleracaoEngineering) < 20): # Só passa a msg para o drone se a diferença de altitude for menor que 1m, isso implica em 100m/s e aceleração menor que 20m/s² ou 2g
@@ -258,46 +228,43 @@ def jogo(): # Ou Experimento
             print("SOP FAILED")
             fimdejogo = True
         
-        fundo.fill(white)
+        fundo.fill(white) #Desenhando o fundo
         
-        [setpoint_x,setpoint_y] = [ang2px(setpoint_angle), m2px(setpoint_altitude)]
-        draw_setpoint(setpoint_x,setpoint_y)
+        [setpoint_x,setpoint_y] = [ang2px(setpoint_angle), m2px(setpoint_altitude)] #Calculando a posição em pixels do setpoint
+        draw_setpoint(setpoint_x,setpoint_y) #Desenhando o sepoint
 
-        [pos_x,pos_y] = [ang2px(angle[-1]), m2px(altitude[-1])]
-        pos_x = pos_x%largura
-        pos_y = pos_y%altura
-        draw_drone(pos_x, pos_y)
-
+        [pos_x,pos_y] = [ang2px(angle[-1]), m2px(altitude[-1])] #Calculando a posição em pixels do drone
+        pos_x = pos_x%largura #Se passar das bordas laterais, o drone aparece do outro lado
+        pos_y = pos_y%altura #Se passar das bordas superior ou inferior, o drone aparece do outro lado
+        draw_drone(pos_x, pos_y) #Desenhando o drone
+        #Imprimindo os valores atuais
         texto("Altura Real: " +str(int(altitude[-1]*100)/100) +" m",red, 10,10)
         texto("Angulo Real: " +str(angle[-1]) + " º",red, 10,20)
         texto("Setpoint Altura: " +str(setpoint_altitude) +" m",green, 10,30)
         texto("Setpoint Angulo: " +str(setpoint_angle) + " º",green, 10,40)
 
-        # pygame.display.flip() # Atualiza toda a tela
-        pygame.display.update()
-        # relogio.tick(fs)
+        pygame.display.update() #O tempo de atualização depende do tempo do recebimento da mensagem
         i = i+1
         toc = time.time()
-        tempo.append(toc-tic)
+        tempo.append(toc-tic) #Salvando o tempo passado desde o início
     
+    #Quando fechar a tela, executa as seguintes instruções:
     if teste == False:
-        drone.write(bytes([17]))
-        drone.write(bytes([17]))
-        celCarga.close()
-        drone.close()
-        plt.figure()
+        drone.write(bytes([17])) #Desliga os motores
+        drone.write(bytes([17])) #Desliga os motores
+        celCarga.close() #Fecha a comunicação serial
+        drone.close() #Fecha a comunicação serial
+        plt.figure() #Plota alguns gráficos
         plt.plot(altitude, label = "Altitude")
         plt.plot(data_setpoint_altitude, label = "Setpoint da Altitude")
         plt.legend()
         plt.show()
-        file.write("altitude = " + str(altitude))
-        file.write("\nsetpoint_altitude = " + str(data_setpoint_altitude))
+        file.write("altitude = " + str(altitude)) #Salva os dados num arquivo txr
+        file.write("\nsetpoint_altitude = " + str(setpoint_altitude))
         file.write("\nangle = " + str(angle))
-        file.write("\nsetpoint_angle = " + str(data_setpoint_angle))
-        file.write("\ndataAcao = " + str(dataAcao))
-        file.write("\ndataP = " + str(dataP))
-        file.write("\ndataI = " + str(dataI))
-        file.write("\ndataD = " + str(dataD))
+        file.write("\nsetpoint_angle = " + str(setpoint_angle))
+        file.write("\ndataA = " + str(dataA))
+        file.write("\ndataB = " + str(dataB))
         file.write("\ntempo = " + str(tempo))
         file.close()
 
