@@ -1,7 +1,7 @@
 
 Calibração/CélulaCarga/RegressaoLinearCelCarga.py
 dadosCelCarga.txt
-*.png
+**/Resultados
 *.txt
 *.mkv
 *.mp4
