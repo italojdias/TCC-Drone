@@ -190,7 +190,6 @@ def jogo(): #Função que cria a janela da interface
                     #Só atualiza as variáveis se o SOP e o MM não estivere falhando
                     altitudeHardware = gettingSignal(dataIntCelCarga, nBytesFromCelCarga, 1, 2)
                     altitudeEngineering = unsignedToSigned(altitudeHardware, 2)/100
-                    altitudeEngineering = setpoint_altitude
                     altitude.append(altitudeEngineering)
                     aceleracaoHardware = gettingSignal(dataIntCelCarga, nBytesFromCelCarga, 3, 2)
                     aceleracaoHardware = unsignedToSigned(aceleracaoHardware, 2)
