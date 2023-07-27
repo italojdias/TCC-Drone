@@ -392,6 +392,7 @@ bool RX(){
       setpoint_altitude = Serial.read();
       setpoint_altitude = setpoint_altitude*100;
       setpoint_angle = Serial.read();
+      python_running = Serial.read();
     }
     #else
     setpoint_angle = 0;

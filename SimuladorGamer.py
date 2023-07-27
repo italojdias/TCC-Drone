@@ -82,6 +82,7 @@ def TX(drone,dataByteCelCarga,setpoint_altitude,setpoint_angle):
     drone.write(dataByteCelCarga)
     drone.write(bytes([setpoint_altitude]))
     drone.write(bytes([setpoint_angle]))
+    drone.write(bytes([1]))
 
 def unsignedToSigned(value,sizeOfBytes): #Função para transformar um sinal unsigned em signed
     range = 2**(sizeOfBytes*8)
@@ -249,8 +250,7 @@ def jogo(): #Função que cria a janela da interface
     
     #Quando fechar a tela, executa as seguintes instruções:
     if teste == False:
-        drone.write(bytes([17])) #Desliga os motores
-        drone.write(bytes([17])) #Desliga os motores
+        drone.write(bytes([0,0,0,0,0,0,0]))
         celCarga.close() #Fecha a comunicação serial
         drone.close() #Fecha a comunicação serial
         plt.figure() #Plota alguns gráficos
