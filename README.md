@@ -17,3 +17,6 @@ Requisitos:
 - pygame e serial (Python) - Basta executar `pip install pygame` e `pip install serial`
 
 teste123
+teste321
+
+teste 10
